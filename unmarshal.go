@@ -8,22 +8,18 @@ import (
 )
 
 func Unmarshal(data []byte, d interface{}) ([]byte, error) {
-	return runUnmarshal(data, d, false)
+	return runUnmarshal(data, d)
 }
 
-func UnmarshalCompact(data []byte, d interface{}) ([]byte, error) {
-	return runUnmarshal(data, d, true)
-}
-
-func runUnmarshal(data []byte, d interface{}, compact bool) ([]byte, error) {
+func runUnmarshal(data []byte, d interface{}) ([]byte, error) {
 	buf := bytes.NewBuffer(data)
-	if err := unmarshal(reflect.ValueOf(d).Elem(), buf, compact); err != nil {
+	if err := unmarshal(reflect.ValueOf(d).Elem(), buf); err != nil {
 		return buf.Bytes(), err
 	}
 	return buf.Bytes(), nil
 }
 
-func unmarshal(v reflect.Value, buf *bytes.Buffer, compact bool) error {
+func unmarshal(v reflect.Value, buf *bytes.Buffer) error {
 	b, err := buf.ReadByte()
 	if err != nil {
 		return err
@@ -33,11 +29,11 @@ func unmarshal(v reflect.Value, buf *bytes.Buffer, compact bool) error {
 	}
 	switch k := v.Kind(); k {
 	case reflect.Map:
-		return unmarshalMap(v, b, buf, compact)
+		return unmarshalMap(v, b, buf)
 	case reflect.Slice:
-		return unmarshalSlice(v, b, buf, compact)
+		return unmarshalSlice(v, b, buf)
 	case reflect.Struct:
-		return unmarshalStruct(v, b, buf, compact)
+		return unmarshalStruct(v, b, buf)
 	case reflect.Interface:
 		var f reflect.Value
 		switch tag := b >> 5; {
@@ -60,16 +56,16 @@ func unmarshal(v reflect.Value, buf *bytes.Buffer, compact bool) error {
 		v.Set(f)
 	case reflect.Ptr:
 		buf.UnreadByte()
-		return unmarshal(v.Elem(), buf, compact)
+		return unmarshal(v.Elem(), buf)
 	default:
 		return decode(v, b, buf)
 	}
 	return nil
 }
 
-func unmarshalStruct(v reflect.Value, b byte, buf *bytes.Buffer, compact bool) error {
+func unmarshalStruct(v reflect.Value, b byte, buf *bytes.Buffer) error {
 	tag := b >> 5
-	if tag != Map>>5 || (compact && tag != Slice>>5) {
+	if tag != Map>>5 {
 		return InvalidTagErr(tag)
 	}
 	for i := 0; i < v.NumField(); i++ {
@@ -77,25 +73,14 @@ func unmarshalStruct(v reflect.Value, b byte, buf *bytes.Buffer, compact bool) e
 		if !f.CanSet() {
 			continue
 		}
-		if !compact {
-			b, err := buf.ReadByte()
-			if err != nil {
-				return err
-			}
-			var name string
-			val := reflect.ValueOf(&name).Elem()
-			if err := decode(val, b, buf); err != nil {
-				return err
-			}
-		}
-		if err := unmarshal(f, buf, compact); err != nil {
+		if err := unmarshal(f, buf); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func unmarshalSlice(v reflect.Value, b byte, buf *bytes.Buffer, compact bool) error {
+func unmarshalSlice(v reflect.Value, b byte, buf *bytes.Buffer) error {
 	tag := b >> 5
 	if tag != Slice>>5 {
 		return InvalidTagErr(tag)
@@ -103,7 +88,7 @@ func unmarshalSlice(v reflect.Value, b byte, buf *bytes.Buffer, compact bool) er
 	length := int(b & maskTag)
 	for i := 0; i < length; i++ {
 		f := reflect.New(v.Type().Elem()).Elem()
-		if err := unmarshal(f, buf, compact); err != nil {
+		if err := unmarshal(f, buf); err != nil {
 			return err
 		}
 		v.Set(reflect.Append(v, f))
@@ -111,7 +96,7 @@ func unmarshalSlice(v reflect.Value, b byte, buf *bytes.Buffer, compact bool) er
 	return nil
 }
 
-func unmarshalMap(v reflect.Value, b byte, buf *bytes.Buffer, compact bool) error {
+func unmarshalMap(v reflect.Value, b byte, buf *bytes.Buffer) error {
 	tag := b >> 5
 	if tag != Map>>5 {
 		return InvalidTagErr(tag)
@@ -119,11 +104,11 @@ func unmarshalMap(v reflect.Value, b byte, buf *bytes.Buffer, compact bool) erro
 	length := int(b & maskTag)
 	for i := 0; i < length; i++ {
 		key := reflect.New(v.Type().Key()).Elem()
-		if err := unmarshal(key, buf, compact); err != nil {
+		if err := unmarshal(key, buf); err != nil {
 			return err
 		}
 		value := reflect.New(v.Type().Elem()).Elem()
-		if err := unmarshal(value, buf, compact); err != nil {
+		if err := unmarshal(value, buf); err != nil {
 			return err
 		}
 		v.SetMapIndex(key, value)
