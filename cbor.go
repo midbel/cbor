@@ -37,9 +37,10 @@ const (
 	Float64
 )
 
-const Indef = 31
-
-const Stop = 0xFF
+const (
+	Indef = 0x1F
+	Stop  = 0xFF
+)
 
 const maskTag = 0x1F
 
@@ -52,10 +53,10 @@ func (i InvalidTagErr) Error() string {
 type UnsupportedTypeErr reflect.Kind
 
 func (u UnsupportedTypeErr) Error() string {
-	return fmt.Sprintf("cbor: unsupported type: %s", reflect.Kind(u))
+	return fmt.Sprintf("cbor: %s not supported", reflect.Kind(u))
 }
 
 var (
-	TooManyValuesErr = errors.New("cbor: too many values")
-	TooFewValuesErr  = errors.New("cbor: too few values")
+	ErrTooManyValues = errors.New("cbor: too many values")
+	ErrTooFewValues  = errors.New("cbor: too few values")
 )

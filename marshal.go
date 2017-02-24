@@ -190,7 +190,7 @@ func encodeLength(tag byte, length uint64, buf *bytes.Buffer) error {
 		default:
 			return InvalidTagErr(tag)
 		}
-		return TooManyValuesErr
+		return ErrTooManyValues
 	}
 	buf.WriteByte(tag)
 	if size != nil {
