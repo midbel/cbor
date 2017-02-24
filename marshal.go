@@ -109,7 +109,8 @@ func encode(v reflect.Value, buf *bytes.Buffer) error {
 		buf.WriteByte(Float64)
 		binary.Write(buf, binary.BigEndian, val)
 	case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int:
-		if val := v.Int(); val >= 0 {
+		val := v.Int()
+		if val >= 0 {
 			return encode(reflect.ValueOf(uint64(val)), buf)
 		}
 		tag := Int
