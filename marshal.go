@@ -3,121 +3,78 @@ package cbor
 import (
 	"bytes"
 	"encoding/binary"
-	"io"
 	"math"
 	"reflect"
-	"strings"
 	"unicode/utf8"
 )
 
-type Encoder struct {
-	w       io.Writer
-	compact bool
-	err     error
-}
-
-func NewEncoder(w io.Writer, compact bool) *Encoder {
-	return &Encoder{w, compact, nil}
-}
-
-func (e *Encoder) Encode(v interface{}) error {
-	if e.err != nil {
-		return e.err
-	}
-	buf, err := runMarshal(v, e.compact)
-	if err != nil {
-		e.err = err
-		return err
-	}
-	if _, err := e.w.Write(buf); err != nil {
-		e.err = err
-		return err
-	}
-	return nil
-}
-
 func Marshal(v interface{}) ([]byte, error) {
-	return runMarshal(v, false)
+	return runMarshal(v)
 }
 
-func MarshalCompact(v interface{}) ([]byte, error) {
-	return runMarshal(v, true)
-}
-
-func runMarshal(v interface{}, compact bool) ([]byte, error) {
+func runMarshal(v interface{}) ([]byte, error) {
 	var buf bytes.Buffer
-	if err := marshal(reflect.ValueOf(v), &buf, compact); err != nil {
+	if err := marshal(reflect.ValueOf(v), &buf); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil
 }
 
-func marshal(v reflect.Value, buf *bytes.Buffer, compact bool) error {
+func marshal(v reflect.Value, buf *bytes.Buffer) error {
 	switch k := v.Kind(); k {
 	case reflect.Struct:
-		return marshalStruct(v, buf, compact)
+		return marshalStruct(v, buf)
 	case reflect.Map:
-		return marshalMap(v, buf, compact)
+		return marshalMap(v, buf)
 	case reflect.Slice:
-		return marshalSlice(v, buf, compact)
+		return marshalSlice(v, buf)
 	case reflect.Interface:
-		return marshal(reflect.ValueOf(v.Interface()), buf, compact)
+		return marshal(reflect.ValueOf(v.Interface()), buf)
 	case reflect.Ptr:
-		return marshal(v.Elem(), buf, compact)
+		return marshal(v.Elem(), buf)
 	default:
 		return encode(v, buf)
 	}
 	return nil
 }
 
-func marshalStruct(v reflect.Value, buf *bytes.Buffer, compact bool) error {
-	tag := Map
-	if compact {
-		tag = Slice
-	}
-	if err := encodeLength(tag, uint64(v.NumField()), buf); err != nil {
+func marshalStruct(v reflect.Value, buf *bytes.Buffer) error {
+	if err := encodeLength(Map, uint64(v.NumField()), buf); err != nil {
 		return err
 	}
-	t := v.Type()
 	for i := 0; i < v.NumField(); i++ {
 		f := v.Field(i)
 		if !f.CanSet() {
 			continue
 		}
-		if !compact {
-			name := strings.ToLower(t.Field(i).Name)
-			if err := encode(reflect.ValueOf(name), buf); err != nil {
-				return err
-			}
-		}
-		if err := marshal(f, buf, compact); err != nil {
+		if err := marshal(f, buf); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func marshalSlice(v reflect.Value, buf *bytes.Buffer, compact bool) error {
+func marshalSlice(v reflect.Value, buf *bytes.Buffer) error {
 	if err := encodeLength(Slice, uint64(v.Len()), buf); err != nil {
 		return err
 	}
 	for i := 0; i < v.Len(); i++ {
-		if err := marshal(v.Index(i), buf, compact); err != nil {
+		if err := marshal(v.Index(i), buf); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func marshalMap(v reflect.Value, buf *bytes.Buffer, compact bool) error {
+func marshalMap(v reflect.Value, buf *bytes.Buffer) error {
 	if err := encodeLength(Map, uint64(v.Len()), buf); err != nil {
 		return err
 	}
 	for _, k := range v.MapKeys() {
-		if err := marshal(k, buf, compact); err != nil {
+		if err := marshal(k, buf); err != nil {
 			return err
 		}
-		if err := marshal(v.MapIndex(k), buf, compact); err != nil {
+		if err := marshal(v.MapIndex(k), buf); err != nil {
 			return err
 		}
 	}
@@ -154,29 +111,28 @@ func encode(v reflect.Value, buf *bytes.Buffer) error {
 	case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int:
 		if val := v.Int(); val >= 0 {
 			return encode(reflect.ValueOf(uint64(val)), buf)
-		} else {
-			tag := Int
-			var datum interface{}
-			switch val := -val - 1; {
-			case val <= 24:
-				tag |= byte(val)
-			case val <= math.MaxInt8:
-				tag |= Len1
-				datum = int8(val)
-			case val <= math.MaxInt16:
-				tag |= Len2
-				datum = int16(val)
-			case val <= math.MaxInt32:
-				tag |= Len4
-				datum = int32(val)
-			case val <= math.MaxInt64:
-				tag |= Len8
-				datum = int64(val)
-			}
-			buf.WriteByte(tag)
-			if datum != nil {
-				binary.Write(buf, binary.BigEndian, datum)
-			}
+		}
+		tag := Int
+		var datum interface{}
+		switch val := -val - 1; {
+		case val <= 24:
+			tag |= byte(val)
+		case val <= math.MaxInt8:
+			tag |= Len1
+			datum = int8(val)
+		case val <= math.MaxInt16:
+			tag |= Len2
+			datum = int16(val)
+		case val <= math.MaxInt32:
+			tag |= Len4
+			datum = int32(val)
+		case val <= math.MaxInt64:
+			tag |= Len8
+			datum = int64(val)
+		}
+		buf.WriteByte(tag)
+		if datum != nil {
+			binary.Write(buf, binary.BigEndian, datum)
 		}
 	case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint:
 		tag := Uint
