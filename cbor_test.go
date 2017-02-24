@@ -11,6 +11,9 @@ var sample = []struct{
 	In  interface{}
 	Out string
 } {
+	{false, "f4"},
+	{true, "f5"},
+	{nil, "f7"},
 	{"", "60"},
 	{"a", "6161"},
 	{"IETF", "6449455446"},
@@ -35,12 +38,12 @@ func TestMarshal(t *testing.T) {
 	for i, s := range sample {
 		buf, err := Marshal(s.In)
 		if err != nil {
-			t.Errorf("%03d) fail to marshal %v (%s)", i, s.In, err)
+			t.Errorf("%03d) fail to marshal %v (%s)", i+1, s.In, err)
 			continue
 		}
 		other, _ := hex.DecodeString(s.Out)
 		if !bytes.Equal(buf, other) {
-			t.Errorf("%03d) want: %x, got: %x", i, other, buf)
+			t.Errorf("%03d) want: %x, got: %x", i+1, other, buf)
 		}
 	}
 }
@@ -51,11 +54,11 @@ func TestUnmarshal(t *testing.T) {
 		
 		var other interface{}
 		if _, err := Unmarshal(buf, &other); err != nil {
-			t.Errorf("%03d) fail to unmarshal %v (%s)", i, s.Out, err)
+			t.Errorf("%03d) fail to unmarshal %#x, should be %v (%s)", i+1, buf, s.In, err)
 			continue
 		}
 		if fmt.Sprintf("%v", other) != fmt.Sprintf("%v", s.In) {
-			t.Errorf("%03d) want: %v (%[1]T), got: %v (%[2]T)", i, s.In, other)
+			t.Errorf("%03d) want: %v, got: %v", i+1, s.In, other)
 		}
 	}
 }

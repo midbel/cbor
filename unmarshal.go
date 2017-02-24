@@ -64,8 +64,7 @@ func unmarshal(v reflect.Value, buf *bytes.Buffer) error {
 }
 
 func unmarshalStruct(v reflect.Value, b byte, buf *bytes.Buffer) error {
-	tag := b >> 5
-	if tag != Map>>5 {
+	if tag := b >> 5; tag != Map>>5 {
 		return InvalidTagErr(tag)
 	}
 	for i := 0; i < v.NumField(); i++ {
@@ -81,8 +80,7 @@ func unmarshalStruct(v reflect.Value, b byte, buf *bytes.Buffer) error {
 }
 
 func unmarshalSlice(v reflect.Value, b byte, buf *bytes.Buffer) error {
-	tag := b >> 5
-	if tag != Slice>>5 {
+	if tag := b >> 5; tag != Slice>>5 {
 		return InvalidTagErr(tag)
 	}
 	length := int(b & maskTag)
@@ -97,8 +95,7 @@ func unmarshalSlice(v reflect.Value, b byte, buf *bytes.Buffer) error {
 }
 
 func unmarshalMap(v reflect.Value, b byte, buf *bytes.Buffer) error {
-	tag := b >> 5
-	if tag != Map>>5 {
+	if tag := b >> 5; tag != Map>>5 {
 		return InvalidTagErr(tag)
 	}
 	length := int(b & maskTag)
