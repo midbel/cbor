@@ -36,19 +36,21 @@ func unmarshal(v reflect.Value, buf *bytes.Buffer) error {
 		return unmarshalStruct(v, b, buf)
 	case reflect.Interface:
 		var f reflect.Value
-		switch tag := b >> 5; {
-		case tag == Int:
+		switch tag := b>>5; {
+		case tag == Int>>5:
 			f = reflect.ValueOf(new(int)).Elem()
-		case tag == Uint:
+		case tag == Uint>>5:
 			f = reflect.ValueOf(new(uint)).Elem()
-		case tag == String || tag == Bin:
+		case tag == String>>5 || tag == Bin>>5:
 			f = reflect.ValueOf(new(string)).Elem()
-		case tag == Other && (b == True || b == False):
+		case b == True || b == False:
 			f = reflect.ValueOf(new(bool)).Elem()
-		case tag == Other && b == Float32:
+		case b == Float32:
 			f = reflect.ValueOf(new(float32)).Elem()
-		case tag == Other && b == Float64:
+		case b == Float64:
 			f = reflect.ValueOf(new(float64)).Elem()
+		default:
+			return InvalidTagErr(b >> 5)
 		}
 		if err := decode(f, b, buf); err != nil {
 			return err
