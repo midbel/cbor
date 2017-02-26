@@ -167,36 +167,11 @@ func decode(v reflect.Value, b byte, buf *bytes.Buffer) error {
 		}
 		v.SetFloat(math.Float64frombits(f))
 	case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int:
-		switch tag := b >> 5; {
-		case tag == Uint>>5:
-			var result uint64
-			val := reflect.ValueOf(&result).Elem()
-			if err := decode(val, b, buf); err != nil {
-				return err
-			}
-			v.SetInt(int64(val.Uint()))
-		case tag == Int>>5:
-			var val int64
-			switch length := tag & maskTag; {
-			case length == Len1:
-				if b, err := buf.ReadByte(); err != nil {
-					return err
-				} else {
-					val = int64(b)
-				}
-			case length == Len2:
-				val = int64(binary.BigEndian.Uint16(buf.Next(2)))
-			case length == Len4:
-				val = int64(binary.BigEndian.Uint32(buf.Next(4)))
-			case length == Len8:
-				val = int64(binary.BigEndian.Uint64(buf.Next(8)))
-			default:
-				val = int64(length)
-			}
-			v.SetInt(-1 - val)
-		default:
-			return InvalidTagErr(tag)
+		i, err := decodeInt(b, buf)
+		if err != nil {
+			return err
 		}
+		v.SetInt(i)
 	case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint:
 		if tag := b >> 5; tag != Uint {
 			return InvalidTagErr(tag)
@@ -223,4 +198,34 @@ func decode(v reflect.Value, b byte, buf *bytes.Buffer) error {
 		return UnsupportedTypeErr(k)
 	}
 	return nil
+}
+
+func decodeInt(b byte, buf *bytes.Buffer) (int64, error) {
+	tag := b >> 5
+	if tag == Uint {
+		var result uint64
+		val := reflect.ValueOf(&result).Elem()
+		if err := decode(val, b, buf); err != nil {
+			return 0, err
+		}
+		return int64(val.Uint()), nil	
+	}
+	var val int64
+	switch length := b & maskTag; {
+	case length == Len1:
+		if b, err := buf.ReadByte(); err != nil {
+			return 0, err
+		} else {
+			val = int64(b)
+		}
+	case length == Len2:
+		val = int64(binary.BigEndian.Uint16(buf.Next(2)))
+	case length == Len4:
+		val = int64(binary.BigEndian.Uint32(buf.Next(4)))
+	case length == Len8:
+		val = int64(binary.BigEndian.Uint64(buf.Next(8)))
+	default:
+		val = int64(length)
+	}
+	return -1 - val, nil
 }
