@@ -13,12 +13,18 @@ type Sample struct {
 	Out string
 }
 
-var sampleTimes = []Sample{
+var sampleIsoTimes = []Sample{
 	{time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC), "c074323031332d30332d32315432303a30343a30305a"},
-	{time.Unix(1363896240, 0), "c11a514b67b0"},
-	{1363896240, "c11a514b67b0"},
-	{time.Unix(1363896240, 5000), "c1fb41d452d9ec200000"},
-	{1363896240.5, "c1fb41d452d9ec200000"},
+	{"2013-03-21T20:04:00Z", "c074323031332d30332d32315432303a30343a30305a"},
+	{1363896240, "c074323031332d30332d32315432303a30343a30305a"},
+	{1363896240.5, "c074323031332d30332d32315432303a30343a30305a"},
+}
+
+var sampleUnixTimes = []Sample{
+	{time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC), "0xc11a514b67b0"},
+	{"2013-03-21T20:04:00Z", "0xc11a514b67b0"},
+	{1363896240, "0xc11a514b67b0"},
+	{1363896240.5, "0xc1fb41d452d9ec200000"},
 }
 
 var sampleOthers = []Sample{
@@ -71,7 +77,27 @@ var sampleFloats = []Sample{
 }
 
 func TestTimes(t *testing.T) {
-	testMarshalSample(sampleTimes, t)
+	sample := []struct{
+		Type byte
+		Sample []Sample
+	}{
+		{IsoTime, sampleIsoTimes},
+		{UnixTime, sampleUnixTimes},
+	}
+	for _, s := range sample {
+		TimeTag = s.Type
+		for i, s := range s.Sample {
+			buf, err := MarshalTime(s.In)
+			if err != nil {
+				t.Errorf("%03d) fail to marshal %v (%s)", i+1, s.In, err)
+				continue
+			}
+			other, _ := hex.DecodeString(s.Out)
+			if !bytes.Equal(buf, other) {
+				t.Errorf("%03d) want: %x, got: %x", i+1, other, buf)
+			}
+		}	
+	}
 }
 
 func TestStrings(t *testing.T) {

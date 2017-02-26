@@ -6,6 +6,11 @@ import (
 	"reflect"
 )
 
+var (
+	TimeTag byte = IsoTime
+)
+
+//Major types
 const (
 	Uint byte = iota << 5
 	Int
