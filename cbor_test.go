@@ -7,17 +7,25 @@ import (
 	"testing"
 )
 
-var sample = []struct {
+type Sample struct {
 	In  interface{}
 	Out string
-}{
+}
+
+var sampleOthers = []Sample{
 	{false, "f4"},
 	{true, "f5"},
 	{nil, "f7"},
+}
+
+var sampleStrings = []Sample {
 	{"", "60"},
 	{"a", "6161"},
 	{"IETF", "6449455446"},
 	{"\"\\", "62225c"},
+}
+
+var sampleUints = []Sample{
 	{0, "00"},
 	{1, "01"},
 	{10, "0a"},
@@ -28,10 +36,16 @@ var sample = []struct {
 	{1000, "1903e8"},
 	{1000000, "1a000f4240"},
 	{1000000000000, "1b000000e8d4a51000"},
+}
+
+var sampleInts = []Sample {
 	{-1, "20"},
 	{-10, "29"},
 	{-100, "3863"},
 	{-1000, "3903e7"},
+}
+
+var sampleFloats = []Sample {
 	{0.0, "f90000"},
 	{-0.0, "f98000"},
 	{1.0, "f93c00"},
@@ -47,7 +61,39 @@ var sample = []struct {
 	{-4.1, "fbc010666666666666"},
 }
 
-func TestMarshal(t *testing.T) {
+func TestStrings(t *testing.T) {
+	runTests(t, sampleStrings)
+}
+
+func TestOthers(t *testing.T) {
+	runTests(t, sampleOthers)
+}
+
+func TestInts(t *testing.T) {
+	runTests(t, sampleInts)
+}
+
+func TestUints(t *testing.T) {
+	runTests(t, sampleUints)
+}
+
+func TestFloats(t *testing.T) {
+	runTests(t, sampleFloats)
+}
+
+func runTests(t *testing.T, s []Sample) {
+	sample := map[string]func([]Sample, *testing.T) {
+		"marshal": testMarshalSample,
+		"unmarshal": testUnmarshalSample,
+	}
+	for n, f := range sample {
+		t.Run(n, func(t *testing.T) {
+			f(s, t)
+		})
+	}
+}
+
+func testMarshalSample(sample []Sample, t *testing.T) {
 	for i, s := range sample {
 		buf, err := Marshal(s.In)
 		if err != nil {
@@ -61,7 +107,7 @@ func TestMarshal(t *testing.T) {
 	}
 }
 
-func TestUnmarshal(t *testing.T) {
+func testUnmarshalSample(sample []Sample, t *testing.T) {
 	for i, s := range sample {
 		buf, _ := hex.DecodeString(s.Out)
 
