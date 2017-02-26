@@ -78,25 +78,16 @@ var sampleFloats = []Sample{
 
 func TestTimes(t *testing.T) {
 	sample := []struct{
+		Name string
 		Type byte
 		Sample []Sample
 	}{
-		{IsoTime, sampleIsoTimes},
-		{UnixTime, sampleUnixTimes},
+		{"iso", IsoTime, sampleIsoTimes},
+		{"unix", UnixTime, sampleUnixTimes},
 	}
 	for _, s := range sample {
 		TimeTag = s.Type
-		for i, s := range s.Sample {
-			buf, err := MarshalTime(s.In)
-			if err != nil {
-				t.Errorf("%03d) fail to marshal %v (%s)", i+1, s.In, err)
-				continue
-			}
-			other, _ := hex.DecodeString(s.Out)
-			if !bytes.Equal(buf, other) {
-				t.Errorf("%03d) want: %x, got: %x", i+1, other, buf)
-			}
-		}	
+		runTests(t, s.Sample)
 	}
 }
 

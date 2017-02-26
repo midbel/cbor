@@ -10,48 +10,23 @@ import (
 )
 
 func Marshal(v interface{}) ([]byte, error) {
-	return runMarshal(v)
-}
-
-func MarshalTime(v interface{}) ([]byte, error) {
-	var other time.Time
 	switch v := v.(type) {
 	case time.Time:
-		other = v
-	case *time.Time:
-		other = *v
-	case int:
-		other = time.Unix(int64(v), 0)
-	case int8:
-		other = time.Unix(int64(v), 0)
-	case int16:
-		other = time.Unix(int64(v), 0)
-	case int32:
-		other = time.Unix(int64(v), 0)
-	case int64:
-		other = time.Unix(v, 0)
-	case float64:
-		sec := int64(v)
-		other = time.Unix(sec, 0)
-	case string:
-		var err error
-		other, err = time.Parse(time.RFC3339, v)
+		var other interface{}
+
+		other = v.UTC().Unix()
+		if TimeTag == IsoTime {
+			other = v.UTC().Format(time.RFC3339)
+		}
+		buf, err := runMarshal(other)
 		if err != nil {
 			return nil, err
 		}
+		data := []byte{Tag | TimeTag}
+		return append(data, buf...), nil
 	default:
-		return nil, UnsupportedTypeErr(reflect.ValueOf(v).Kind())
+		return runMarshal(v)
 	}
-	v = other.UTC().Unix()
-	if TimeTag == IsoTime {
-		v = other.UTC().Format(time.RFC3339)
-	}
-	buf, err := runMarshal(v)
-	if err != nil {
-		return nil, err
-	}
-	data := []byte{Tag | TimeTag}
-	return append(data, buf...), nil
 }
 
 func runMarshal(v interface{}) ([]byte, error) {
