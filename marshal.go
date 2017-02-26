@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"math"
 	"reflect"
+	"time"
 	"unicode/utf8"
 )
 
@@ -23,6 +24,11 @@ func runMarshal(v interface{}) ([]byte, error) {
 func marshal(v reflect.Value, buf *bytes.Buffer) error {
 	switch k := v.Kind(); k {
 	case reflect.Struct:
+		if t, ok := v.Interface().(time.Time); ok {
+			s := t.Format(time.RFC3339)
+			buf.WriteByte(Tag | IsoTime)
+			return encode(reflect.ValueOf(s), buf)
+		}
 		return marshalStruct(v, buf)
 	case reflect.Map:
 		return marshalMap(v, buf)

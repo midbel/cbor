@@ -18,6 +18,11 @@ const (
 )
 
 const (
+	IsoTime byte = iota
+	UnixTime
+)
+
+const (
 	Len1 byte = iota + 24
 	Len2
 	Len4

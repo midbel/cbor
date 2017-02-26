@@ -23,7 +23,7 @@ var sampleOthers = []Sample{
 	{nil, "f7"},
 }
 
-var sampleStrings = []Sample {
+var sampleStrings = []Sample{
 	{"", "60"},
 	{"a", "6161"},
 	{"IETF", "6449455446"},
@@ -43,14 +43,14 @@ var sampleUints = []Sample{
 	{1000000000000, "1b000000e8d4a51000"},
 }
 
-var sampleInts = []Sample {
+var sampleInts = []Sample{
 	{-1, "20"},
 	{-10, "29"},
 	{-100, "3863"},
 	{-1000, "3903e7"},
 }
 
-var sampleFloats = []Sample {
+var sampleFloats = []Sample{
 	{0.0, "f90000"},
 	{-0.0, "f98000"},
 	{1.0, "f93c00"},
@@ -91,8 +91,8 @@ func TestFloats(t *testing.T) {
 }
 
 func runTests(t *testing.T, s []Sample) {
-	sample := map[string]func([]Sample, *testing.T) {
-		"marshal": testMarshalSample,
+	sample := map[string]func([]Sample, *testing.T){
+		"marshal":   testMarshalSample,
 		"unmarshal": testUnmarshalSample,
 	}
 	for n, f := range sample {

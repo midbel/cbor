@@ -36,7 +36,7 @@ func unmarshal(v reflect.Value, buf *bytes.Buffer) error {
 		return unmarshalStruct(v, b, buf)
 	case reflect.Interface:
 		var f reflect.Value
-		switch tag := b>>5; {
+		switch tag := b >> 5; {
 		case tag == Int>>5:
 			f = reflect.ValueOf(new(int)).Elem()
 		case tag == Uint>>5:
@@ -208,7 +208,7 @@ func decodeInt(b byte, buf *bytes.Buffer) (int64, error) {
 		if err := decode(val, b, buf); err != nil {
 			return 0, err
 		}
-		return int64(val.Uint()), nil	
+		return int64(val.Uint()), nil
 	}
 	var val int64
 	switch length := b & maskTag; {
