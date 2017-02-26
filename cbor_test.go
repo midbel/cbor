@@ -5,11 +5,16 @@ import (
 	"encoding/hex"
 	"fmt"
 	"testing"
+	"time"
 )
 
 type Sample struct {
 	In  interface{}
 	Out string
+}
+
+var sampleTimes = []Sample{
+	{time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC), "c074323031332d30332d32315432303a30343a30305a"},
 }
 
 var sampleOthers = []Sample{
@@ -59,6 +64,10 @@ var sampleFloats = []Sample {
 	{0.00006103515625, "f90400"},
 	{-4.0, "f9c400"},
 	{-4.1, "fbc010666666666666"},
+}
+
+func TestTimes(t *testing.T) {
+	testMarshalSample(sampleTimes, t)
 }
 
 func TestStrings(t *testing.T) {
