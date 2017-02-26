@@ -15,6 +15,10 @@ type Sample struct {
 
 var sampleTimes = []Sample{
 	{time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC), "c074323031332d30332d32315432303a30343a30305a"},
+	{time.Unix(1363896240, 0), "c11a514b67b0"},
+	{1363896240, "c11a514b67b0"},
+	{time.Unix(1363896240, 5000), "c1fb41d452d9ec200000"},
+	{1363896240.5, "c1fb41d452d9ec200000"},
 }
 
 var sampleOthers = []Sample{
