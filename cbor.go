@@ -25,6 +25,7 @@ const (
 const (
 	IsoTime  = 0x00
 	UnixTime = 0x01
+	Item     = 0x18
 	URI      = 0x20
 )
 

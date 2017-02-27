@@ -3,7 +3,6 @@ package cbor
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"math"
 	"net/url"
 	"reflect"
@@ -30,8 +29,7 @@ func Marshal(v interface{}) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		fmt.Printf("%x\n", buf)
-		return append([]byte{Tag | URI}, buf...), nil
+		return append([]byte{Tag | Item, URI}, buf...), nil
 	default:
 		return runMarshal(v)
 	}
