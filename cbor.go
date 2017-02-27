@@ -23,8 +23,9 @@ const (
 )
 
 const (
-	IsoTime byte = iota
-	UnixTime
+	IsoTime  = 0x00
+	UnixTime = 0x01
+	URI      = 0x20
 )
 
 const (

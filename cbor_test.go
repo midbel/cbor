@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"net/url"
 	"testing"
 	"time"
 )
@@ -15,16 +16,14 @@ type Sample struct {
 
 var sampleIsoTimes = []Sample{
 	{time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC), "c074323031332d30332d32315432303a30343a30305a"},
-	{"2013-03-21T20:04:00Z", "c074323031332d30332d32315432303a30343a30305a"},
-	{1363896240, "c074323031332d30332d32315432303a30343a30305a"},
-	{1363896240.5, "c074323031332d30332d32315432303a30343a30305a"},
 }
 
 var sampleUnixTimes = []Sample{
 	{time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC), "0xc11a514b67b0"},
-	{"2013-03-21T20:04:00Z", "0xc11a514b67b0"},
-	{1363896240, "0xc11a514b67b0"},
-	{1363896240.5, "0xc1fb41d452d9ec200000"},
+}
+
+var sampleURIs = []Sample{
+	{url.URL{Scheme: "http", Host: "www.example.com"}, "d82076687474703a2f2f7777772e6578616d706c652e636f6d"},
 }
 
 var sampleOthers = []Sample{
@@ -77,9 +76,9 @@ var sampleFloats = []Sample{
 }
 
 func TestTimes(t *testing.T) {
-	sample := []struct{
-		Name string
-		Type byte
+	sample := []struct {
+		Name   string
+		Type   byte
 		Sample []Sample
 	}{
 		{"iso", IsoTime, sampleIsoTimes},
@@ -89,6 +88,10 @@ func TestTimes(t *testing.T) {
 		TimeTag = s.Type
 		runTests(t, s.Sample)
 	}
+}
+
+func TestURIs(t *testing.T) {
+	runTests(t, sampleURIs)
 }
 
 func TestStrings(t *testing.T) {

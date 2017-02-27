@@ -3,7 +3,9 @@ package cbor
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"math"
+	"net/url"
 	"reflect"
 	"time"
 	"unicode/utf8"
@@ -22,8 +24,14 @@ func Marshal(v interface{}) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		data := []byte{Tag | TimeTag}
-		return append(data, buf...), nil
+		return append([]byte{Tag | TimeTag}, buf...), nil
+	case url.URL:
+		buf, err := runMarshal(v.String())
+		if err != nil {
+			return nil, err
+		}
+		fmt.Printf("%x\n", buf)
+		return append([]byte{Tag | URI}, buf...), nil
 	default:
 		return runMarshal(v)
 	}

@@ -49,6 +49,7 @@ func unmarshal(v reflect.Value, buf *bytes.Buffer) error {
 			f = reflect.ValueOf(new(float32)).Elem()
 		case b == Float64:
 			f = reflect.ValueOf(new(float64)).Elem()
+		case b == Tag:
 		default:
 			return InvalidTagErr(b >> 5)
 		}
