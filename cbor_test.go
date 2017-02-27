@@ -24,6 +24,7 @@ var sampleUnixTimes = []Sample{
 
 var sampleURIs = []Sample{
 	{url.URL{Scheme: "http", Host: "www.example.com"}, "d82076687474703a2f2f7777772e6578616d706c652e636f6d"},
+	{url.URL{Scheme: "http", Host: "www.google.com", RawQuery: "q=golang"}, "d820781e687474703a2f2f7777772e676f6f676c652e636f6d3f713d676f6c616e67"},
 }
 
 var sampleOthers = []Sample{
