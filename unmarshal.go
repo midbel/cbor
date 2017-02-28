@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"math"
+	"net/url"
 	"reflect"
+	"time"
 )
 
 func Unmarshal(data []byte, d interface{}) ([]byte, error) {
@@ -49,7 +51,37 @@ func unmarshal(v reflect.Value, buf *bytes.Buffer) error {
 			f = reflect.ValueOf(new(float32)).Elem()
 		case b == Float64:
 			f = reflect.ValueOf(new(float64)).Elem()
-		case b == Tag:
+		case tag == Tag>>5:
+			tag := b & maskTag
+			if tag >= Item {
+				tag, _ = buf.ReadByte()
+			}
+			switch b, _ := buf.ReadByte(); tag {
+			case IsoTime:
+				str := reflect.ValueOf(new(string)).Elem()
+				if err := decode(str, b, buf); err != nil {
+					return err
+				}
+				if when, err := time.Parse(time.RFC3339, str.String()); err != nil {
+					return err
+				} else {
+					v.Set(reflect.ValueOf(when))
+				}
+			case UnixTime:
+			case URI:
+				str := reflect.ValueOf(new(string)).Elem()
+				if err := decode(str, b, buf); err != nil {
+					return err
+				}
+				if uri, err := url.Parse(str.String()); err != nil {
+					return err
+				} else {
+					v.Set(reflect.ValueOf(*uri))
+				}
+				return nil
+			default:
+			}
+			return nil
 		default:
 			return InvalidTagErr(b >> 5)
 		}

@@ -192,8 +192,9 @@ func encodeLength(tag byte, length uint64, buf *bytes.Buffer) error {
 	var size interface{}
 
 	switch {
-	case length < 1<<5:
-		tag |= byte(length)
+	case length < uint64(Len1):
+		buf.WriteByte(tag | byte(length))
+		return nil
 	case length <= math.MaxUint8:
 		tag |= Len1
 		size = uint8(length)

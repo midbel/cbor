@@ -14,17 +14,20 @@ type Sample struct {
 	Out string
 }
 
-var sampleIsoTimes = []Sample{
+var sampleTimes = []Sample{
 	{time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC), "c074323031332d30332d32315432303a30343a30305a"},
-}
-
-var sampleUnixTimes = []Sample{
-	{time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC), "0xc11a514b67b0"},
+	{time.Date(2017, 2, 28, 20, 38, 0, 0, time.UTC), "c074323031372d30322d32385432303a33383a30305a"},
 }
 
 var sampleURIs = []Sample{
-	{url.URL{Scheme: "http", Host: "www.example.com"}, "d82076687474703a2f2f7777772e6578616d706c652e636f6d"},
-	{url.URL{Scheme: "http", Host: "www.google.com", RawQuery: "q=golang"}, "d820781e687474703a2f2f7777772e676f6f676c652e636f6d3f713d676f6c616e67"},
+	{
+		In:  url.URL{Scheme: "http", Host: "www.example.com"},
+		Out: "d82076687474703a2f2f7777772e6578616d706c652e636f6d",
+	},
+	{
+		In:  url.URL{Scheme: "http", Host: "www.google.com", RawQuery: "q=golang"},
+		Out: "d820781e687474703a2f2f7777772e676f6f676c652e636f6d3f713d676f6c616e67",
+	},
 }
 
 var sampleOthers = []Sample{
@@ -77,18 +80,7 @@ var sampleFloats = []Sample{
 }
 
 func TestTimes(t *testing.T) {
-	sample := []struct {
-		Name   string
-		Type   byte
-		Sample []Sample
-	}{
-		{"iso", IsoTime, sampleIsoTimes},
-		{"unix", UnixTime, sampleUnixTimes},
-	}
-	for _, s := range sample {
-		TimeTag = s.Type
-		runTests(t, s.Sample)
-	}
+	runTests(t, sampleTimes)
 }
 
 func TestURIs(t *testing.T) {
