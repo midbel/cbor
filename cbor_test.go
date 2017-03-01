@@ -79,6 +79,27 @@ var sampleFloats = []Sample{
 	{float64(-4.1), "fbc010666666666666"},
 }
 
+var sampleArrays = []Sample{
+	{[]int{1, 2, 3}, "83010203"},
+	{[]interface{}{1, []int{2, 3}, []int{4, 5}}, "8301820203820405"},
+	{[]interface{}{"a", map[string]string{"b": "c"}}, "826161bf61626163ff"},
+}
+
+var sampleMaps = []Sample{
+	{map[string]interface{}{}, "a0"},
+	{map[int]int{1: 2, 3: 4}, "a201020304"},
+	{map[string]interface{}{"a": 1, "b": []int{2, 3}}, "a26161016162820203"},
+	{map[string]interface{}{"Fun": true, "Amt": -2}, "bf6346756ef563416d7421ff"},
+}
+
+func TestMaps(t *testing.T) {
+	runTests(t, sampleMaps)
+}
+
+func TestArrays(t *testing.T) {
+	runTests(t, sampleArrays)
+}
+
 func TestTimes(t *testing.T) {
 	runTests(t, sampleTimes)
 }
