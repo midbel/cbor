@@ -6,10 +6,6 @@ import (
 	"reflect"
 )
 
-var (
-	TimeTag byte = IsoTime
-)
-
 //Major types
 const (
 	Uint byte = iota << 5
@@ -22,6 +18,7 @@ const (
 	Other
 )
 
+//Optional Tagging items
 const (
 	IsoTime  = 0x00
 	UnixTime = 0x01

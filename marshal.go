@@ -13,17 +13,11 @@ import (
 func Marshal(v interface{}) ([]byte, error) {
 	switch v := v.(type) {
 	case time.Time:
-		var other interface{}
-
-		other = v.UTC().Unix()
-		if TimeTag == IsoTime {
-			other = v.UTC().Format(time.RFC3339)
-		}
-		buf, err := runMarshal(other)
+		buf, err := runMarshal(v.UTC().Format(time.RFC3339))
 		if err != nil {
 			return nil, err
 		}
-		return append([]byte{Tag | TimeTag}, buf...), nil
+		return append([]byte{Tag | IsoTime}, buf...), nil
 	case url.URL:
 		buf, err := runMarshal(v.String())
 		if err != nil {
