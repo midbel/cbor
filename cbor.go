@@ -51,7 +51,7 @@ const (
 	Stop  = 0xFF
 )
 
-const maskTag = 0x1F
+const mask = 0x1F
 
 type InvalidTagErr byte
 
@@ -69,3 +69,4 @@ var (
 	ErrTooManyValues = errors.New("cbor: too many values")
 	ErrTooFewValues  = errors.New("cbor: too few values")
 )
+

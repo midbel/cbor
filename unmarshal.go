@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"math"
-	"net/url"
 	"reflect"
-	"time"
 )
 
 func Unmarshal(data []byte, d interface{}) ([]byte, error) {
@@ -29,71 +27,15 @@ func unmarshal(v reflect.Value, buf *bytes.Buffer) error {
 	if b == Nil || b == Undefined {
 		return nil
 	}
-	switch k := v.Kind(); k {
-	case reflect.Map:
-		return unmarshalMap(v, b, buf)
-	case reflect.Slice:
-		return unmarshalSlice(v, b, buf)
-	case reflect.Struct:
-		return unmarshalStruct(v, b, buf)
-	case reflect.Interface:
-		var f reflect.Value
-		switch tag := b >> 5; {
-		case tag == Int>>5:
-			f = reflect.ValueOf(new(int)).Elem()
-		case tag == Uint>>5:
-			f = reflect.ValueOf(new(uint)).Elem()
-		case tag == String>>5 || tag == Bin>>5:
-			f = reflect.ValueOf(new(string)).Elem()
-		case b == True || b == False:
-			f = reflect.ValueOf(new(bool)).Elem()
-		case b == Float32:
-			f = reflect.ValueOf(new(float32)).Elem()
-		case b == Float64:
-			f = reflect.ValueOf(new(float64)).Elem()
-		case tag == Tag>>5:
-			tag := b & maskTag
-			if tag >= Item {
-				tag, _ = buf.ReadByte()
-			}
-			switch b, _ := buf.ReadByte(); tag {
-			case IsoTime:
-				str := reflect.ValueOf(new(string)).Elem()
-				if err := decode(str, b, buf); err != nil {
-					return err
-				}
-				if when, err := time.Parse(time.RFC3339, str.String()); err != nil {
-					return err
-				} else {
-					v.Set(reflect.ValueOf(when))
-				}
-			case UnixTime:
-			case URI:
-				str := reflect.ValueOf(new(string)).Elem()
-				if err := decode(str, b, buf); err != nil {
-					return err
-				}
-				if uri, err := url.Parse(str.String()); err != nil {
-					return err
-				} else {
-					v.Set(reflect.ValueOf(*uri))
-				}
-				return nil
-			default:
-			}
-			return nil
-		default:
-			return InvalidTagErr(b >> 5)
-		}
-		if err := decode(f, b, buf); err != nil {
-			return err
-		}
-		v.Set(f)
-	case reflect.Ptr:
-		buf.UnreadByte()
-		return unmarshal(v.Elem(), buf)
-	default:
-		return decode(v, b, buf)
+	switch major, info := b>>5, b&mask; major {
+	case Uint>>5:
+		return decodeUint(v, info, buf)
+	case Int>>5:
+	case Bin>>5, String>>5:
+	case Slice>>5:
+	case Map>>5:
+	case Tag>>5:
+	case Other>>5:
 	}
 	return nil
 }
@@ -118,7 +60,7 @@ func unmarshalSlice(v reflect.Value, b byte, buf *bytes.Buffer) error {
 	if tag := b >> 5; tag != Slice>>5 {
 		return InvalidTagErr(tag)
 	}
-	length := int(b & maskTag)
+	length := int(b & mask)
 	for i := 0; i < length; i++ {
 		f := reflect.New(v.Type().Elem()).Elem()
 		if err := unmarshal(f, buf); err != nil {
@@ -133,7 +75,7 @@ func unmarshalMap(v reflect.Value, b byte, buf *bytes.Buffer) error {
 	if tag := b >> 5; tag != Map>>5 {
 		return InvalidTagErr(tag)
 	}
-	length := int(b & maskTag)
+	length := int(b & mask)
 	for i := 0; i < length; i++ {
 		key := reflect.New(v.Type().Key()).Elem()
 		if err := unmarshal(key, buf); err != nil {
@@ -155,7 +97,7 @@ func decode(v reflect.Value, b byte, buf *bytes.Buffer) error {
 			return InvalidTagErr(b)
 		}
 		var size int
-		switch length := b & maskTag; {
+		switch length := b & mask; {
 		case length == Len1:
 			if b, err := buf.ReadByte(); err != nil {
 				return err
@@ -169,7 +111,7 @@ func decode(v reflect.Value, b byte, buf *bytes.Buffer) error {
 		case length == Len8:
 			size = int(binary.BigEndian.Uint64(buf.Next(8)))
 		default:
-			size = int(length & maskTag)
+			size = int(length & mask)
 		}
 		v.SetString(string(buf.Next(size)))
 	case reflect.Bool:
@@ -205,28 +147,6 @@ func decode(v reflect.Value, b byte, buf *bytes.Buffer) error {
 			return err
 		}
 		v.SetInt(i)
-	case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint:
-		if tag := b >> 5; tag != Uint {
-			return InvalidTagErr(tag)
-		}
-		var val uint64
-		switch length := b & maskTag; {
-		case length == Len1:
-			if b, err := buf.ReadByte(); err != nil {
-				return err
-			} else {
-				val = uint64(b)
-			}
-		case length == Len2:
-			val = uint64(binary.BigEndian.Uint16(buf.Next(2)))
-		case length == Len4:
-			val = uint64(binary.BigEndian.Uint32(buf.Next(4)))
-		case length == Len8:
-			val = uint64(binary.BigEndian.Uint64(buf.Next(8)))
-		default:
-			val = uint64(length)
-		}
-		v.SetUint(val)
 	default:
 		return UnsupportedTypeErr(k)
 	}
@@ -244,7 +164,7 @@ func decodeInt(b byte, buf *bytes.Buffer) (int64, error) {
 		return int64(val.Uint()), nil
 	}
 	var val int64
-	switch length := b & maskTag; {
+	switch length := b & mask; {
 	case length == Len1:
 		if b, err := buf.ReadByte(); err != nil {
 			return 0, err
@@ -261,4 +181,37 @@ func decodeInt(b byte, buf *bytes.Buffer) (int64, error) {
 		val = int64(length)
 	}
 	return -1 - val, nil
+}
+
+func decodeUint(v reflect.Value, info byte, buf *bytes.Buffer) error {
+	var value uint64
+	switch info {
+	case Len1:
+		b, err := buf.ReadByte()
+		if err != nil {
+			return err
+		}
+		value = uint64(b)
+	case Len2:
+		value = uint64(binary.BigEndian.Uint16(buf.Next(2)))
+	case Len4:
+		value = uint64(binary.BigEndian.Uint16(buf.Next(4)))
+	case Len8:
+		value = uint64(binary.BigEndian.Uint16(buf.Next(8)))
+	default:
+		value = uint64(info)
+	}
+	var f reflect.Value
+	switch k := v.Kind(); k {
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		f = reflect.ValueOf(value)
+	case reflect.Interface:
+		f = reflect.New(reflect.TypeOf(value)).Elem()
+		f.SetUint(value)
+	default:
+		return UnsupportedTypeErr(k)
+	}
+	v.Set(f)
+
+	return nil
 }
