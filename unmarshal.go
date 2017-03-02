@@ -30,68 +30,92 @@ func unmarshal(v reflect.Value, buf *bytes.Buffer) error {
 		return nil
 	}
 	switch major, info := b>>5, b&mask; major {
-	case Uint>>5:
+	case Uint >> 5:
 		return decodeUint(v, info, buf)
-	case Int>>5:
+	case Int >> 5:
 		return decodeInt(v, info, buf)
-	case Bin>>5, String>>5:
+	case Bin >> 5, String >> 5:
 		return decodeString(v, info, buf)
-	case Slice>>5:
-	case Map>>5:
-	case Tag>>5:
+	case Slice >> 5:
+		return unmarshalSlice(v, info, buf)
+	case Map >> 5:
+		return unmarshalMap(v, info, buf)
+	case Tag >> 5:
 		return decodeTag(v, info, buf)
-	case Other>>5:
+	case Other >> 5:
 		return decodeOther(v, info, buf)
 	}
 	return nil
 }
 
-func unmarshalStruct(v reflect.Value, b byte, buf *bytes.Buffer) error {
-	if tag := b >> 5; tag != Map>>5 {
-		return InvalidTagErr(tag)
+func unmarshalMap(v reflect.Value, info byte, buf *bytes.Buffer) error {
+	var length int
+	switch info {
+	case Len1:
+		b, _ := buf.ReadByte()
+		length = int(b)
+	case Len2:
+		length = int(binary.BigEndian.Uint16(buf.Next(2)))
+	case Len4:
+		length = int(binary.BigEndian.Uint16(buf.Next(4)))
+	case Len8:
+		length = int(binary.BigEndian.Uint16(buf.Next(8)))
+	default:
+		length = int(info)
 	}
-	for i := 0; i < v.NumField(); i++ {
-		f := v.Field(i)
-		if !f.CanSet() {
-			continue
+	switch k := v.Kind(); k {
+	case reflect.Struct:
+		for i := 0; i < v.NumField(); i++ {
+			f := v.Field(i)
+			if !f.CanSet() {
+				continue
+			}
+			if err := unmarshal(f, buf); err != nil {
+				return err
+			}
 		}
-		if err := unmarshal(f, buf); err != nil {
-			return err
+	case reflect.Map:
+		for i := 0; i < length; i++ {
+			key := reflect.New(v.Type().Key()).Elem()
+			if err := unmarshal(key, buf); err != nil {
+				return err
+			}
+			value := reflect.New(v.Type().Elem()).Elem()
+			if err := unmarshal(value, buf); err != nil {
+				return err
+			}
+			v.SetMapIndex(key, value)
 		}
+	default:
+		return UnsupportedTypeErr(k)
 	}
 	return nil
 }
 
-func unmarshalSlice(v reflect.Value, b byte, buf *bytes.Buffer) error {
-	if tag := b >> 5; tag != Slice>>5 {
-		return InvalidTagErr(tag)
+func unmarshalSlice(v reflect.Value, info byte, buf *bytes.Buffer) error {
+	if v.Kind() != reflect.Slice {
+		return UnsupportedTypeErr(v.Kind())
 	}
-	length := int(b & mask)
+	var length int
+	switch info {
+	case Len1:
+		b, _ := buf.ReadByte()
+		length = int(b)
+	case Len2:
+		length = int(binary.BigEndian.Uint16(buf.Next(2)))
+	case Len4:
+		length = int(binary.BigEndian.Uint16(buf.Next(4)))
+	case Len8:
+		length = int(binary.BigEndian.Uint16(buf.Next(8)))
+	default:
+		length = int(info)
+	}
 	for i := 0; i < length; i++ {
 		f := reflect.New(v.Type().Elem()).Elem()
 		if err := unmarshal(f, buf); err != nil {
 			return err
 		}
 		v.Set(reflect.Append(v, f))
-	}
-	return nil
-}
-
-func unmarshalMap(v reflect.Value, b byte, buf *bytes.Buffer) error {
-	if tag := b >> 5; tag != Map>>5 {
-		return InvalidTagErr(tag)
-	}
-	length := int(b & mask)
-	for i := 0; i < length; i++ {
-		key := reflect.New(v.Type().Key()).Elem()
-		if err := unmarshal(key, buf); err != nil {
-			return err
-		}
-		value := reflect.New(v.Type().Elem()).Elem()
-		if err := unmarshal(value, buf); err != nil {
-			return err
-		}
-		v.SetMapIndex(key, value)
 	}
 	return nil
 }
@@ -114,9 +138,9 @@ func decodeInt(v reflect.Value, info byte, buf *bytes.Buffer) error {
 	default:
 		value = int64(info)
 	}
-	
+
 	var f reflect.Value
-	switch k, value := v.Kind(), -1 - value; k {
+	switch k, value := v.Kind(), -1-value; k {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		f = reflect.ValueOf(value)
 	case reflect.Interface:
@@ -240,7 +264,7 @@ func decodeOther(v reflect.Value, info byte, buf *bytes.Buffer) error {
 }
 
 func decodeString(v reflect.Value, info byte, buf *bytes.Buffer) error {
-	var size  int
+	var size int
 	switch info {
 	case Len1:
 		b, err := buf.ReadByte()
@@ -258,7 +282,7 @@ func decodeString(v reflect.Value, info byte, buf *bytes.Buffer) error {
 		size = int(info)
 	}
 	value := string(buf.Next(size))
-	
+
 	var f reflect.Value
 	switch k := v.Kind(); k {
 	case reflect.String:
@@ -270,6 +294,6 @@ func decodeString(v reflect.Value, info byte, buf *bytes.Buffer) error {
 		return UnsupportedTypeErr(k)
 	}
 	v.Set(f)
-	
+
 	return nil
 }

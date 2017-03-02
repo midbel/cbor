@@ -75,4 +75,3 @@ var (
 	ErrTooManyValues = errors.New("cbor: too many values")
 	ErrTooFewValues  = errors.New("cbor: too few values")
 )
-
