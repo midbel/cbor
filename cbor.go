@@ -34,14 +34,14 @@ const (
 )
 
 const (
-	False = Other | (20 + iota)
+	False = 20 + iota
 	True
 	Nil
 	Undefined
 )
 
 const (
-	Float16 = Other | (25 + iota)
+	Float16 = 25 + iota
 	Float32
 	Float64
 )
@@ -57,6 +57,12 @@ type InvalidTagErr byte
 
 func (i InvalidTagErr) Error() string {
 	return fmt.Sprintf("invalid tag found %#02x", byte(i))
+}
+
+type UnassignedTagErr byte
+
+func (u UnassignedTagErr) Error() string {
+	return fmt.Sprintf("unassigned tag %#02x", byte(u))
 }
 
 type UnsupportedTypeErr reflect.Kind

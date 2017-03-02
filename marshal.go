@@ -101,7 +101,7 @@ func marshalMap(v reflect.Value, buf *bytes.Buffer) error {
 func encode(v reflect.Value, buf *bytes.Buffer) error {
 	switch k := v.Kind(); k {
 	case reflect.Invalid:
-		buf.WriteByte(byte(Undefined))
+		buf.WriteByte(byte(Other | Undefined))
 	case reflect.String:
 		tag := Bin
 		if utf8.ValidString(v.String()) {
@@ -111,19 +111,19 @@ func encode(v reflect.Value, buf *bytes.Buffer) error {
 		buf.Write([]byte(v.String()))
 	case reflect.Bool:
 		if v.Bool() {
-			buf.WriteByte(True)
+			buf.WriteByte(Other | True)
 		} else {
-			buf.WriteByte(False)
+			buf.WriteByte(Other | False)
 		}
 	case reflect.Float32:
 		val := math.Float32bits(float32(v.Float()))
 
-		buf.WriteByte(Float32)
+		buf.WriteByte(Other | Float32)
 		binary.Write(buf, binary.BigEndian, val)
 	case reflect.Float64:
 		val := math.Float64bits(v.Float())
 
-		buf.WriteByte(Float64)
+		buf.WriteByte(Other | Float64)
 		binary.Write(buf, binary.BigEndian, val)
 	case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int:
 		val := v.Int()

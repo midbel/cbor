@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"math"
+	"net/url"
 	"reflect"
+	"time"
 )
 
 func Unmarshal(data []byte, d interface{}) ([]byte, error) {
@@ -31,11 +33,15 @@ func unmarshal(v reflect.Value, buf *bytes.Buffer) error {
 	case Uint>>5:
 		return decodeUint(v, info, buf)
 	case Int>>5:
+		return decodeInt(v, info, buf)
 	case Bin>>5, String>>5:
+		return decodeString(v, info, buf)
 	case Slice>>5:
 	case Map>>5:
 	case Tag>>5:
+		return decodeTag(v, info, buf)
 	case Other>>5:
+		return decodeOther(v, info, buf)
 	}
 	return nil
 }
@@ -90,97 +96,38 @@ func unmarshalMap(v reflect.Value, b byte, buf *bytes.Buffer) error {
 	return nil
 }
 
-func decode(v reflect.Value, b byte, buf *bytes.Buffer) error {
-	switch k := v.Kind(); k {
-	case reflect.String:
-		if b := b >> 5; !(b == Bin>>5 || b == String>>5) {
-			return InvalidTagErr(b)
-		}
-		var size int
-		switch length := b & mask; {
-		case length == Len1:
-			if b, err := buf.ReadByte(); err != nil {
-				return err
-			} else {
-				size = int(b)
-			}
-		case length == Len2:
-			size = int(binary.BigEndian.Uint16(buf.Next(2)))
-		case length == Len4:
-			size = int(binary.BigEndian.Uint32(buf.Next(4)))
-		case length == Len8:
-			size = int(binary.BigEndian.Uint64(buf.Next(8)))
-		default:
-			size = int(length & mask)
-		}
-		v.SetString(string(buf.Next(size)))
-	case reflect.Bool:
-		switch b {
-		case True:
-			v.SetBool(true)
-		case False:
-			v.SetBool(false)
-		default:
-			return InvalidTagErr(b)
-		}
-	case reflect.Float32:
-		if b != Float32 {
-			return InvalidTagErr(b)
-		}
-		var f uint32
-		if err := binary.Read(buf, binary.BigEndian, &f); err != nil {
-			return err
-		}
-		v.SetFloat(float64(math.Float32frombits(f)))
-	case reflect.Float64:
-		if b != Float64 {
-			return InvalidTagErr(b)
-		}
-		var f uint64
-		if err := binary.Read(buf, binary.BigEndian, &f); err != nil {
-			return err
-		}
-		v.SetFloat(math.Float64frombits(f))
-	case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int:
-		i, err := decodeInt(b, buf)
+func decodeInt(v reflect.Value, info byte, buf *bytes.Buffer) error {
+	var value int64
+	switch info {
+	case Len1:
+		b, err := buf.ReadByte()
 		if err != nil {
 			return err
 		}
-		v.SetInt(i)
+		value = int64(b)
+	case Len2:
+		value = int64(binary.BigEndian.Uint16(buf.Next(2)))
+	case Len4:
+		value = int64(binary.BigEndian.Uint16(buf.Next(4)))
+	case Len8:
+		value = int64(binary.BigEndian.Uint16(buf.Next(8)))
+	default:
+		value = int64(info)
+	}
+	
+	var f reflect.Value
+	switch k, value := v.Kind(), -1 - value; k {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		f = reflect.ValueOf(value)
+	case reflect.Interface:
+		f = reflect.New(reflect.TypeOf(value)).Elem()
+		f.SetInt(value)
 	default:
 		return UnsupportedTypeErr(k)
 	}
-	return nil
-}
+	v.Set(f)
 
-func decodeInt(b byte, buf *bytes.Buffer) (int64, error) {
-	tag := b >> 5
-	if tag == Uint {
-		var result uint64
-		val := reflect.ValueOf(&result).Elem()
-		if err := decode(val, b, buf); err != nil {
-			return 0, err
-		}
-		return int64(val.Uint()), nil
-	}
-	var val int64
-	switch length := b & mask; {
-	case length == Len1:
-		if b, err := buf.ReadByte(); err != nil {
-			return 0, err
-		} else {
-			val = int64(b)
-		}
-	case length == Len2:
-		val = int64(binary.BigEndian.Uint16(buf.Next(2)))
-	case length == Len4:
-		val = int64(binary.BigEndian.Uint32(buf.Next(4)))
-	case length == Len8:
-		val = int64(binary.BigEndian.Uint64(buf.Next(8)))
-	default:
-		val = int64(length)
-	}
-	return -1 - val, nil
+	return nil
 }
 
 func decodeUint(v reflect.Value, info byte, buf *bytes.Buffer) error {
@@ -213,5 +160,116 @@ func decodeUint(v reflect.Value, info byte, buf *bytes.Buffer) error {
 	}
 	v.Set(f)
 
+	return nil
+}
+
+func decodeTag(v reflect.Value, info byte, buf *bytes.Buffer) error {
+	if info >= Item {
+		b, err := buf.ReadByte()
+		if err != nil {
+			return nil
+		}
+		info = b
+	}
+	switch info {
+	case IsoTime:
+		var str string
+		f := reflect.ValueOf(&str).Elem()
+		if err := unmarshal(f, buf); err != nil {
+			return err
+		}
+		t, err := time.Parse(time.RFC3339, str)
+		if err != nil {
+			return err
+		}
+		v.Set(reflect.ValueOf(t))
+	case URI:
+		var str string
+		f := reflect.ValueOf(&str).Elem()
+		if err := unmarshal(f, buf); err != nil {
+			return err
+		}
+		u, err := url.Parse(str)
+		if err != nil {
+			return err
+		}
+		v.Set(reflect.ValueOf(*u))
+	default:
+		return UnassignedTagErr(info)
+	}
+	return nil
+}
+
+func decodeOther(v reflect.Value, info byte, buf *bytes.Buffer) error {
+	var value interface{}
+	switch info {
+	case Nil, Undefined:
+		return nil
+	case True:
+		value = true
+	case False:
+		value = false
+	case Float32:
+		var u uint32
+		if err := binary.Read(buf, binary.BigEndian, &u); err != nil {
+			return err
+		}
+		value = math.Float32frombits(u)
+	case Float64:
+		var u uint64
+		if err := binary.Read(buf, binary.BigEndian, &u); err != nil {
+			return err
+		}
+		value = math.Float64frombits(u)
+	default:
+		return UnassignedTagErr(info)
+	}
+	var f reflect.Value
+	switch k := v.Kind(); {
+	case k == v.Kind():
+		f = reflect.ValueOf(value)
+	case k == reflect.Interface:
+		f = reflect.New(reflect.TypeOf(value)).Elem()
+		f.Set(reflect.ValueOf(value))
+	default:
+		return UnsupportedTypeErr(k)
+	}
+	v.Set(f)
+
+	return nil
+}
+
+func decodeString(v reflect.Value, info byte, buf *bytes.Buffer) error {
+	var size  int
+	switch info {
+	case Len1:
+		b, err := buf.ReadByte()
+		if err != nil {
+			return err
+		}
+		size = int(b)
+	case Len2:
+		size = int(binary.BigEndian.Uint16(buf.Next(2)))
+	case Len4:
+		size = int(binary.BigEndian.Uint16(buf.Next(4)))
+	case Len8:
+		size = int(binary.BigEndian.Uint16(buf.Next(8)))
+	default:
+		size = int(info)
+	}
+	value := string(buf.Next(size))
+	
+	var f reflect.Value
+	switch k := v.Kind(); k {
+	case reflect.String:
+		f = reflect.ValueOf(value)
+	case reflect.Interface:
+		f = reflect.New(reflect.TypeOf(value)).Elem()
+		f.SetString(value)
+	default:
+		return UnsupportedTypeErr(k)
+	}
+	v.Set(f)
+	
 	return nil
 }
