@@ -5,8 +5,8 @@ import (
 	"encoding/binary"
 	"math"
 	"net/url"
-	"regexp"
 	"reflect"
+	"regexp"
 	"time"
 	"unicode/utf8"
 )
@@ -34,7 +34,7 @@ func marshal(v reflect.Value, buf *bytes.Buffer) error {
 			}
 			buf.WriteByte(Tag | IsoTime)
 			buf.Write(data)
-			
+
 			return nil
 		case url.URL:
 			data, err := runMarshal(v.String())
@@ -44,7 +44,7 @@ func marshal(v reflect.Value, buf *bytes.Buffer) error {
 			buf.WriteByte(Tag | Item)
 			buf.WriteByte(URI)
 			buf.Write(data)
-			
+
 			return nil
 		case regexp.Regexp:
 			data, err := runMarshal(v.String())
@@ -58,11 +58,16 @@ func marshal(v reflect.Value, buf *bytes.Buffer) error {
 		if err := encodeLength(Map, uint64(v.NumField()), buf); err != nil {
 			return err
 		}
+		t := v.Type()
 		for i := 0; i < v.NumField(); i++ {
-			if !v.CanSet() {
-				return nil
-			}
 			f := v.Field(i)
+			if t.Field(i).PkgPath != "" {
+				continue
+			}
+			name := t.Field(i).Name
+			if err := marshal(reflect.ValueOf(name), buf); err != nil {
+				return err
+			}
 			if err := marshal(f, buf); err != nil {
 				return err
 			}
