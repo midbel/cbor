@@ -102,12 +102,12 @@ func encode(v reflect.Value, buf *bytes.Buffer) error {
 		}
 	case reflect.Float32:
 		buf.WriteByte(Other | Float32)
-		
+
 		val := math.Float32bits(float32(v.Float()))
 		binary.Write(buf, binary.BigEndian, val)
 	case reflect.Float64:
 		buf.WriteByte(Other | Float64)
-		
+
 		val := math.Float64bits(v.Float())
 		binary.Write(buf, binary.BigEndian, val)
 	case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int:
