@@ -156,7 +156,11 @@ func testMarshalSample(sample []Sample, t *testing.T) {
 
 func testUnmarshalSample(sample []Sample, t *testing.T) {
 	for i, s := range sample {
-		buf, _ := hex.DecodeString(s.Out)
+		buf, err := hex.DecodeString(s.Out)
+		if err != nil {
+			t.Errorf("invalid encoded cbor item %s: %s", s.Out, err)
+			continue
+		}
 
 		var other interface{}
 		if _, err := Unmarshal(buf, &other); err != nil {

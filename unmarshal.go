@@ -26,9 +26,9 @@ func unmarshal(v reflect.Value, buf *bytes.Buffer) error {
 	if err != nil {
 		return err
 	}
-	if b == Nil || b == Undefined {
+	/*if b == Nil&mask || b == Undefined&mask {
 		return nil
-	}
+	}*/
 	switch major, info := b>>5, b&mask; major {
 	case Uint >> 5:
 		return decodeUint(v, info, buf)
@@ -57,9 +57,9 @@ func unmarshalMap(v reflect.Value, info byte, buf *bytes.Buffer) error {
 	case Len2:
 		length = int(binary.BigEndian.Uint16(buf.Next(2)))
 	case Len4:
-		length = int(binary.BigEndian.Uint16(buf.Next(4)))
+		length = int(binary.BigEndian.Uint32(buf.Next(4)))
 	case Len8:
-		length = int(binary.BigEndian.Uint16(buf.Next(8)))
+		length = int(binary.BigEndian.Uint64(buf.Next(8)))
 	default:
 		length = int(info)
 	}
@@ -104,9 +104,9 @@ func unmarshalSlice(v reflect.Value, info byte, buf *bytes.Buffer) error {
 	case Len2:
 		length = int(binary.BigEndian.Uint16(buf.Next(2)))
 	case Len4:
-		length = int(binary.BigEndian.Uint16(buf.Next(4)))
+		length = int(binary.BigEndian.Uint32(buf.Next(4)))
 	case Len8:
-		length = int(binary.BigEndian.Uint16(buf.Next(8)))
+		length = int(binary.BigEndian.Uint64(buf.Next(8)))
 	default:
 		length = int(info)
 	}
@@ -132,9 +132,9 @@ func decodeInt(v reflect.Value, info byte, buf *bytes.Buffer) error {
 	case Len2:
 		value = int64(binary.BigEndian.Uint16(buf.Next(2)))
 	case Len4:
-		value = int64(binary.BigEndian.Uint16(buf.Next(4)))
+		value = int64(binary.BigEndian.Uint32(buf.Next(4)))
 	case Len8:
-		value = int64(binary.BigEndian.Uint16(buf.Next(8)))
+		value = int64(binary.BigEndian.Uint64(buf.Next(8)))
 	default:
 		value = int64(info)
 	}
@@ -166,9 +166,9 @@ func decodeUint(v reflect.Value, info byte, buf *bytes.Buffer) error {
 	case Len2:
 		value = uint64(binary.BigEndian.Uint16(buf.Next(2)))
 	case Len4:
-		value = uint64(binary.BigEndian.Uint16(buf.Next(4)))
+		value = uint64(binary.BigEndian.Uint32(buf.Next(4)))
 	case Len8:
-		value = uint64(binary.BigEndian.Uint16(buf.Next(8)))
+		value = uint64(binary.BigEndian.Uint64(buf.Next(8)))
 	default:
 		value = uint64(info)
 	}
@@ -275,9 +275,9 @@ func decodeString(v reflect.Value, info byte, buf *bytes.Buffer) error {
 	case Len2:
 		size = int(binary.BigEndian.Uint16(buf.Next(2)))
 	case Len4:
-		size = int(binary.BigEndian.Uint16(buf.Next(4)))
+		size = int(binary.BigEndian.Uint32(buf.Next(4)))
 	case Len8:
-		size = int(binary.BigEndian.Uint16(buf.Next(8)))
+		size = int(binary.BigEndian.Uint64(buf.Next(8)))
 	default:
 		size = int(info)
 	}

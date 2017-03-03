@@ -115,19 +115,19 @@ func encode(v reflect.Value, buf *bytes.Buffer) error {
 		case val >= 0:
 			return encode(reflect.ValueOf(uint64(val)), buf)
 		case val > -24:
-			buf.WriteByte(Int | byte(val))
+			buf.WriteByte(Int | byte(-val-1))
 		case val >= math.MinInt8:
 			buf.WriteByte(Int | Len1)
-			binary.Write(buf, binary.BigEndian, int8(val))
+			binary.Write(buf, binary.BigEndian, int8(-val-1))
 		case val >= math.MinInt16:
 			buf.WriteByte(Int | Len2)
-			binary.Write(buf, binary.BigEndian, int16(val))
+			binary.Write(buf, binary.BigEndian, int16(-val-1))
 		case val >= math.MinInt32:
 			buf.WriteByte(Int | Len4)
-			binary.Write(buf, binary.BigEndian, int32(val))
+			binary.Write(buf, binary.BigEndian, int32(-val-1))
 		case val >= math.MinInt64:
 			buf.WriteByte(Int | Len8)
-			binary.Write(buf, binary.BigEndian, int64(val))
+			binary.Write(buf, binary.BigEndian, int64(-val-1))
 		}
 	case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint:
 		switch val := v.Uint(); {
