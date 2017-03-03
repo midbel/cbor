@@ -92,6 +92,25 @@ var sampleMaps = []Sample{
 	{map[string]interface{}{"Fun": true, "Amt": -2}, "bf6346756ef563416d7421ff"},
 }
 
+func TestStructs(t *testing.T) {
+	type File struct {
+		Name     string
+		Location string
+		Lastmod  time.Time
+		Size     int
+	}
+	src := File{"cbor_test.go", "/tmp", time.Now(), 35673}
+	buf, err := Marshal(src)
+	if err != nil {
+		t.Errorf("fail to marshal %+v: %s", src, err)
+		return
+	}
+	dst := new(File)
+	if _, err := Unmarshal(buf, dst); err != nil {
+		t.Errorf("fail to unmarshal %+v: %s", dst, err)
+	}
+}
+
 func TestMaps(t *testing.T) {
 	runTests(t, sampleMaps)
 }
