@@ -197,16 +197,17 @@ func decodeUint(v reflect.Value, info byte, buf *bytes.Buffer) error {
 	}
 	var f reflect.Value
 	switch k := v.Kind(); k {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		v.SetInt(int64(value))
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		f = reflect.ValueOf(value)
+		v.SetUint(value)
 	case reflect.Interface:
 		f = reflect.New(reflect.TypeOf(value)).Elem()
 		f.SetUint(value)
+		v.Set(f)
 	default:
 		return UnsupportedTypeErr(k)
 	}
-	v.Set(f)
-
 	return nil
 }
 
