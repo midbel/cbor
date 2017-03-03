@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/url"
 	"reflect"
+	"regexp"
 	"time"
 )
 
@@ -218,6 +219,17 @@ func decodeTag(v reflect.Value, info byte, buf *bytes.Buffer) error {
 			return err
 		}
 		v.Set(reflect.ValueOf(*u))
+	case Regex:
+		var str string
+		f := reflect.ValueOf(&str).Elem()
+		if err := unmarshal(f, buf); err != nil {
+			return err
+		}
+		r, err := regexp.Compile(str)
+		if err != nil {
+			return err
+		}
+		v.Set(reflect.ValueOf(*r))
 	default:
 		return UnassignedTagErr(info)
 	}

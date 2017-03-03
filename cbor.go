@@ -24,6 +24,7 @@ const (
 	UnixTime = 0x01
 	Item     = 0x18
 	URI      = 0x20
+	Regex    = 0x23
 )
 
 const (

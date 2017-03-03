@@ -5,28 +5,14 @@ import (
 	"encoding/binary"
 	"math"
 	"net/url"
+	"regexp"
 	"reflect"
 	"time"
 	"unicode/utf8"
 )
 
 func Marshal(v interface{}) ([]byte, error) {
-	switch v := v.(type) {
-	case time.Time:
-		buf, err := runMarshal(v.UTC().Format(time.RFC3339))
-		if err != nil {
-			return nil, err
-		}
-		return append([]byte{Tag | IsoTime}, buf...), nil
-	case url.URL:
-		buf, err := runMarshal(v.String())
-		if err != nil {
-			return nil, err
-		}
-		return append([]byte{Tag | Item, URI}, buf...), nil
-	default:
-		return runMarshal(v)
-	}
+	return runMarshal(v)
 }
 
 func runMarshal(v interface{}) ([]byte, error) {
@@ -40,6 +26,35 @@ func runMarshal(v interface{}) ([]byte, error) {
 func marshal(v reflect.Value, buf *bytes.Buffer) error {
 	switch k := v.Kind(); k {
 	case reflect.Struct:
+		switch v := v.Interface().(type) {
+		case time.Time:
+			data, err := runMarshal(v.UTC().Format(time.RFC3339))
+			if err != nil {
+				return err
+			}
+			buf.WriteByte(Tag | IsoTime)
+			buf.Write(data)
+			
+			return nil
+		case url.URL:
+			data, err := runMarshal(v.String())
+			if err != nil {
+				return err
+			}
+			buf.WriteByte(Tag | Item)
+			buf.WriteByte(URI)
+			buf.Write(data)
+			
+			return nil
+		case regexp.Regexp:
+			data, err := runMarshal(v.String())
+			if err != nil {
+				return err
+			}
+			buf.WriteByte(Tag | Item)
+			buf.WriteByte(Regex)
+			buf.Write(data)
+		}
 		if err := encodeLength(Map, uint64(v.NumField()), buf); err != nil {
 			return err
 		}
