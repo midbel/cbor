@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"reflect"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -66,9 +67,15 @@ func unmarshalMap(v reflect.Value, info byte, buf *bytes.Buffer) error {
 	}
 	switch k := v.Kind(); k {
 	case reflect.Struct:
-		for i := 0; i < v.NumField(); i++ {
-			f := v.Field(i)
-			if !f.CanSet() {
+		for i := 0; i < length; i++ {
+			var n string
+			if err := unmarshal(reflect.ValueOf(&n).Elem(), buf); err != nil {
+				return err
+			}
+			f := v.FieldByNameFunc(func(s string) bool {
+				return strings.ToLower(n) == strings.ToLower(s)
+			})
+			if !f.CanSet() || !f.IsValid() {
 				continue
 			}
 			if err := unmarshal(f, buf); err != nil {
@@ -94,9 +101,6 @@ func unmarshalMap(v reflect.Value, info byte, buf *bytes.Buffer) error {
 }
 
 func unmarshalSlice(v reflect.Value, info byte, buf *bytes.Buffer) error {
-	if v.Kind() != reflect.Slice {
-		return UnsupportedTypeErr(v.Kind())
-	}
 	var length int
 	switch info {
 	case Len1:
@@ -111,14 +115,20 @@ func unmarshalSlice(v reflect.Value, info byte, buf *bytes.Buffer) error {
 	default:
 		length = int(info)
 	}
+	t := reflect.MakeSlice(reflect.SliceOf(v.Type()), 0, 0)
+	other := reflect.New(t.Type()).Elem()
 	for i := 0; i < length; i++ {
-		f := reflect.New(v.Type().Elem()).Elem()
+		f := reflect.New(other.Type().Elem()).Elem()
 		if err := unmarshal(f, buf); err != nil {
 			return err
 		}
-		v.Set(reflect.Append(v, f))
+		other.Set(reflect.Append(other, f))
 	}
-	return nil
+	if k := v.Kind(); k == reflect.Slice || k == reflect.Interface {
+		v.Set(other)
+		return nil
+	}
+	return UnsupportedTypeErr(v.Kind())
 }
 
 func decodeInt(v reflect.Value, info byte, buf *bytes.Buffer) error {
