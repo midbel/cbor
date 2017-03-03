@@ -28,9 +28,6 @@ func unmarshal(v reflect.Value, buf *bytes.Buffer) error {
 	if err != nil {
 		return err
 	}
-	/*if b == Nil&mask || b == Undefined&mask {
-		return nil
-	}*/
 	switch major, info := b>>5, b&mask; major {
 	case Uint >> 5:
 		return decodeUint(v, info, buf)
@@ -94,6 +91,14 @@ func unmarshalMap(v reflect.Value, info byte, buf *bytes.Buffer) error {
 			}
 			v.SetMapIndex(key, value)
 		}
+	case reflect.Interface:
+		//data := make(map[string]interface{})
+		data := make(map[interface{}]interface{})
+		f := reflect.ValueOf(&data).Elem()
+		if err := unmarshalMap(f, info, buf); err != nil {
+			return err
+		}
+		v.Set(f)
 	default:
 		return UnsupportedTypeErr(k)
 	}
@@ -115,20 +120,27 @@ func unmarshalSlice(v reflect.Value, info byte, buf *bytes.Buffer) error {
 	default:
 		length = int(info)
 	}
-	t := reflect.MakeSlice(reflect.SliceOf(v.Type()), 0, 0)
-	other := reflect.New(t.Type()).Elem()
-	for i := 0; i < length; i++ {
-		f := reflect.New(other.Type().Elem()).Elem()
-		if err := unmarshal(f, buf); err != nil {
+
+	switch k := v.Kind(); k {
+	case reflect.Slice:
+		for i := 0; i < length; i++ {
+			f := reflect.New(v.Type().Elem()).Elem()
+			if err := unmarshal(f, buf); err != nil {
+				return err
+			}
+			v.Set(reflect.Append(v, f))
+		}
+	case reflect.Interface:
+		data := make([]interface{}, 0, 0)
+		f := reflect.ValueOf(&data).Elem()
+		if err := unmarshalSlice(f, info, buf); err != nil {
 			return err
 		}
-		other.Set(reflect.Append(other, f))
+		v.Set(f)
+	default:
+		return UnsupportedTypeErr(k)
 	}
-	if k := v.Kind(); k == reflect.Slice || k == reflect.Interface {
-		v.Set(other)
-		return nil
-	}
-	return UnsupportedTypeErr(v.Kind())
+	return nil
 }
 
 func decodeInt(v reflect.Value, info byte, buf *bytes.Buffer) error {
