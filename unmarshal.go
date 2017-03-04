@@ -48,8 +48,13 @@ func unmarshal(v reflect.Value, buf *bytes.Buffer) error {
 }
 
 func unmarshalMap(v reflect.Value, info byte, buf *bytes.Buffer) error {
-	var length int
+	var (
+		length int
+		indef  bool
+	)
 	switch info {
+	case Indef:
+		indef = true
 	case Len1:
 		b, _ := buf.ReadByte()
 		length = int(b)
@@ -80,7 +85,14 @@ func unmarshalMap(v reflect.Value, info byte, buf *bytes.Buffer) error {
 			}
 		}
 	case reflect.Map:
-		for i := 0; i < length; i++ {
+		for i := 0; indef || i < length; i++ {
+			if indef {
+				b, err := buf.ReadByte()
+				buf.UnreadByte()
+				if err != nil || b == Stop {
+					break
+				}
+			}
 			key := reflect.New(v.Type().Key()).Elem()
 			if err := unmarshal(key, buf); err != nil {
 				return err
@@ -106,8 +118,13 @@ func unmarshalMap(v reflect.Value, info byte, buf *bytes.Buffer) error {
 }
 
 func unmarshalSlice(v reflect.Value, info byte, buf *bytes.Buffer) error {
-	var length int
+	var (
+		length int
+		indef  bool
+	)
 	switch info {
+	case Indef:
+		indef = true
 	case Len1:
 		b, _ := buf.ReadByte()
 		length = int(b)
@@ -123,7 +140,14 @@ func unmarshalSlice(v reflect.Value, info byte, buf *bytes.Buffer) error {
 
 	switch k := v.Kind(); k {
 	case reflect.Slice:
-		for i := 0; i < length; i++ {
+		for i := 0; indef || i < length; i++ {
+			if indef {
+				b, err := buf.ReadByte()
+				buf.UnreadByte()
+				if err != nil || b == Stop {
+					break
+				}
+			}
 			f := reflect.New(v.Type().Elem()).Elem()
 			if err := unmarshal(f, buf); err != nil {
 				return err
