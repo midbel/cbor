@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"regexp"
 	"time"
+	"strings"
 	"unicode/utf8"
 )
 
@@ -65,6 +66,36 @@ func marshal(v reflect.Value, buf *bytes.Buffer) error {
 				continue
 			}
 			name := t.Field(i).Name
+			tag := t.Field(i).Tag.Get("cbor")
+			if tag == "-" {
+				continue
+			}
+			var info string
+			switch ix := strings.Index(tag, ","); {
+			case ix > 0:
+				tag, info = tag[:ix], tag[ix+1:]
+			case ix == 0:
+				info = tag[1:]
+			}
+			if info == "omitempty" {
+				switch k := f.Kind(); k {
+				case reflect.Map, reflect.Slice:
+					if f.Len() == 0 {
+						continue
+					}
+				case reflect.Ptr:
+					if f.IsNil() {
+						continue
+					}
+				default:
+					if !f.IsValid() {
+						continue
+					}
+				}
+			}
+			if tag != "" {
+				name = tag
+			}
 			if err := marshal(reflect.ValueOf(name), buf); err != nil {
 				return err
 			}
