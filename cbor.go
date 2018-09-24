@@ -1,12 +1,12 @@
 package cbor
 
 import (
-  "errors"
-  "fmt"
+	"errors"
+	"fmt"
 )
 
 var (
-	ErrTooLarge = errors.New("cbor: too large")
+	ErrTooLarge   = errors.New("cbor: too large")
 	ErrOutOfRange = errors.New("cbor: out of range")
 )
 

@@ -1,8 +1,8 @@
 package cbor
 
 import (
-  "bytes"
-  "reflect"
+	"bytes"
+	"reflect"
 )
 
 func Unmarshal(bs []byte, v interface{}) error {
