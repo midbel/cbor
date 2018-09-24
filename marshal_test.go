@@ -45,7 +45,7 @@ func TestMarshalBool(t *testing.T) {
 }
 
 func TestMarshalString(t *testing.T) {
-	data := []testunit{
+	data := []testunit {
 		{Value: "", Want: "0x60"},
 		{Value: "a", Want: "0x6161"},
 		{Value: "IETF", Want: "0x6449455446"},
@@ -54,7 +54,7 @@ func TestMarshalString(t *testing.T) {
 }
 
 func TestMarshalFloat(t *testing.T) {
-	data := []testunit{
+	data := []testunit {
 		{Value: float32(0.0), Want: "0xf90000"},
 		{Value: float32(-0.0), Want: "0xf98000"},
 		{Value: float32(1.0), Want: "0xf93c00"},
@@ -67,7 +67,7 @@ func TestMarshalFloat(t *testing.T) {
 }
 
 func TestMarshalArray(t *testing.T) {
-	data := []testunit{
+	data := []testunit {
 		{Value: []int{}, Want: "0x80"},
 		{Value: []int{1, 2, 3}, Want: "0x83010203"},
 		{Value: []interface{}{"a", map[string]string{"b": "c"}}, Want: "0x826161a161626163"},
@@ -76,25 +76,25 @@ func TestMarshalArray(t *testing.T) {
 }
 
 func TestMarshalMap(t *testing.T) {
-	data := []testunit{
+	data := []testunit {
 		{Value: map[string]interface{}{"a": 1, "b": []int{2, 3}}, Want: "0xa26161016162820203"},
 	}
 	testMarshal(t, data)
 }
 
 func testMarshal(t *testing.T, data []testunit) {
-	for _, d := range data {
+	for i, d := range data {
 		got, err := Marshal(d.Value)
 		if err != nil {
 			t.Error(err)
 			continue
 		}
 		if s := fmt.Sprintf("%#x", got); d.Want != s {
-			r := "%v => want: %s, got: %s"
+			r := "%3d: %v => want: %s, got: %s"
 			if _, ok := d.Value.(fmt.Stringer); ok {
-				r = "%s => want: %s, got: %s"
+				r = "%3d: %s => want: %s, got: %s"
 			}
-			t.Errorf(r, d.Value, d.Want, s)
+			t.Errorf(r, i+1, d.Value, d.Want, s)
 		}
 	}
 }
