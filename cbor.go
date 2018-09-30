@@ -64,10 +64,10 @@ func Debug(w io.Writer, bs []byte) error {
 }
 
 func DebugReader(w io.Writer, r io.Reader) error {
-	return debugReader(w, bufio.NewReader(r))
+	return debugReader(w, bufio.NewReader(r), true)
 }
 
-func debugReader(w io.Writer, r *bufio.Reader) error {
+func debugReader(w io.Writer, r *bufio.Reader, nl bool) error {
 	b, err := r.ReadByte()
 	if err != nil {
 		return err
@@ -89,14 +89,52 @@ func debugReader(w io.Writer, r *bufio.Reader) error {
 	case Other:
 		err = debugOther(w, r, a)
 	}
-	return nil
+	if nl {
+		fmt.Fprintln(w)
+	}
+	return err
 }
 
 func debugArray(w io.Writer, r io.Reader, a byte) error {
+	size, err := sizeof(r, a)
+	if err != nil {
+		return err
+	}
+	var buf bytes.Buffer
+	buf.WriteString("array[")
+
+	rs := bufio.NewReader(r)
+	for i := 0; i < size; i++ {
+		if err := debugReader(&buf, rs, false); err != nil {
+			return err
+		}
+		buf.WriteString(", ")
+	}
+	buf.WriteString("]")
+	io.Copy(w, &buf)
 	return nil
 }
 
 func debugMap(w io.Writer, r io.Reader, a byte) error {
+	size, err := sizeof(r, a)
+	if err != nil {
+		return err
+	}
+	var buf bytes.Buffer
+	buf.WriteString("map[")
+
+	rs := bufio.NewReader(r)
+	for i := 0; i < size; i++ {
+		if err := debugReader(&buf, rs, false); err != nil {
+			return err
+		}
+		buf.WriteString(": ")
+		if err := debugReader(&buf, rs, false); err != nil {
+			return err
+		}
+		buf.WriteString(",")
+	}
+	buf.WriteString("]")
 	return nil
 }
 
@@ -105,30 +143,7 @@ func debugOther(w io.Writer, r io.Reader, a byte) error {
 }
 
 func debugString(w io.Writer, r io.Reader, a byte) error {
-	var (
-		size int
-		err  error
-	)
-	switch a {
-	case Len1:
-		var v uint8
-		err = binary.Read(r, binary.BigEndian, &v)
-		size = int(v)
-	case Len2:
-		var v uint16
-		err = binary.Read(r, binary.BigEndian, &v)
-		size = int(v)
-	case Len4:
-		var v uint32
-		err = binary.Read(r, binary.BigEndian, &v)
-		size = int(v)
-	case Len8:
-		var v uint64
-		err = binary.Read(r, binary.BigEndian, &v)
-		size = int(v)
-	default:
-		size = int(a)
-	}
+	size, err := sizeof(r, a)
 	if err != nil {
 		return err
 	}
@@ -136,7 +151,7 @@ func debugString(w io.Writer, r io.Reader, a byte) error {
 	if _, err := io.ReadFull(r, bs); err != nil {
 		return err
 	}
-	fmt.Fprintf(w, "string (%03b_%05b): %s\n", String>>5, a, string(bs))
+	fmt.Fprintf(w, "string(%s)", string(bs))
 	return nil
 }
 
@@ -168,11 +183,39 @@ func debugUint(w io.Writer, r io.Reader, a byte) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(w, "uint (%03b_%05b): %d\n", Uint>>5, a, item)
+	fmt.Fprintf(w, "positive(%d)", item)
 	return nil
 }
 
 func debugInt(w io.Writer, r io.Reader, a byte) error {
-	fmt.Fprintf(w, "int (%03b_%05b): %d\n", Int>>5, a, 0)
+	fmt.Fprintf(w, "negative(%d)", 0)
 	return nil
+}
+
+func sizeof(r io.Reader, a byte) (int, error) {
+	var (
+		size int
+		err  error
+	)
+	switch a {
+	case Len1:
+		var v uint8
+		err = binary.Read(r, binary.BigEndian, &v)
+		size = int(v)
+	case Len2:
+		var v uint16
+		err = binary.Read(r, binary.BigEndian, &v)
+		size = int(v)
+	case Len4:
+		var v uint32
+		err = binary.Read(r, binary.BigEndian, &v)
+		size = int(v)
+	case Len8:
+		var v uint64
+		err = binary.Read(r, binary.BigEndian, &v)
+		size = int(v)
+	default:
+		size = int(a)
+	}
+	return size, err
 }
