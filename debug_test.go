@@ -14,27 +14,28 @@ type debugunit struct {
 
 func TestDebugArray(t *testing.T) {
 	data := []debugunit{
-		{Raw: "80", Want: "array[]\n"},
-		{Raw: "83010203", Want: "array[1, 2, 3]\n"},
+		{Raw: "80", Want: "[]\n"},
+		{Raw: "83010203", Want: "[1, 2, 3]\n"},
 	}
 	testDebug(t, data)
 }
 
 func TestDebugMap(t *testing.T) {
 	data := []debugunit{
-		{Raw: "a0", Want: "map[]"},
-		{Raw: "a201020304", Want: "map[]"},
+		{Raw: "a0", Want: "{}\n"},
+		{Raw: "a201020304", Want: "{1: 2, 3: 4}\n"},
+		{Raw: "a26161016162820203", Want: "{\"a\": 1, \"b\": [2, 3]}\n"},
 	}
 	testDebug(t, data)
 }
 
 func TestDebugPositive(t *testing.T) {
 	data := []debugunit{
-		{Raw: "01", Want: "positive(1)\n"},
-		{Raw: "0a", Want: "positive(10)\n"},
-		{Raw: "17", Want: "positive(24)\n"},
-		{Raw: "1818", Want: "positive(25)\n"},
-		{Raw: "1819", Want: "positive(25)\n"},
+		{Raw: "01", Want: "1\n"},
+		{Raw: "0a", Want: "10\n"},
+		{Raw: "17", Want: "23\n"},
+		{Raw: "1818", Want: "24\n"},
+		{Raw: "1819", Want: "25\n"},
 	}
 	testDebug(t, data)
 }
@@ -52,6 +53,7 @@ func testDebug(t *testing.T, data []debugunit) {
 			continue
 		}
 		if got := w.String(); got != d.Want {
+			t.Logf("%x - %x", got, d.Want)
 			t.Errorf("%d: want %s, got %s", i+1, strings.TrimSpace(d.Want), got)
 		}
 	}

@@ -101,14 +101,16 @@ func debugArray(w io.Writer, r io.Reader, a byte) error {
 		return err
 	}
 	var buf bytes.Buffer
-	buf.WriteString("array[")
+	buf.WriteString("[")
 
 	rs := bufio.NewReader(r)
 	for i := 0; i < size; i++ {
 		if err := debugReader(&buf, rs, false); err != nil {
 			return err
 		}
-		buf.WriteString(", ")
+		if i < size-1 {
+			buf.WriteString(", ")
+		}
 	}
 	buf.WriteString("]")
 	io.Copy(w, &buf)
@@ -121,7 +123,7 @@ func debugMap(w io.Writer, r io.Reader, a byte) error {
 		return err
 	}
 	var buf bytes.Buffer
-	buf.WriteString("map[")
+	buf.WriteString("{")
 
 	rs := bufio.NewReader(r)
 	for i := 0; i < size; i++ {
@@ -132,9 +134,12 @@ func debugMap(w io.Writer, r io.Reader, a byte) error {
 		if err := debugReader(&buf, rs, false); err != nil {
 			return err
 		}
-		buf.WriteString(",")
+		if i < size-1 {
+			buf.WriteString(", ")
+		}
 	}
-	buf.WriteString("]")
+	buf.WriteString("}")
+	io.Copy(w, &buf)
 	return nil
 }
 
@@ -151,7 +156,7 @@ func debugString(w io.Writer, r io.Reader, a byte) error {
 	if _, err := io.ReadFull(r, bs); err != nil {
 		return err
 	}
-	fmt.Fprintf(w, "string(%s)", string(bs))
+	fmt.Fprintf(w, "%q", string(bs))
 	return nil
 }
 
@@ -183,12 +188,12 @@ func debugUint(w io.Writer, r io.Reader, a byte) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(w, "positive(%d)", item)
+	fmt.Fprintf(w, "%d", item)
 	return nil
 }
 
 func debugInt(w io.Writer, r io.Reader, a byte) error {
-	fmt.Fprintf(w, "negative(%d)", 0)
+	fmt.Fprintf(w, "%d", 0)
 	return nil
 }
 
