@@ -29,13 +29,42 @@ func TestDebugMap(t *testing.T) {
 	testDebug(t, data)
 }
 
-func TestDebugPositive(t *testing.T) {
+func TestDebugUnsigned(t *testing.T) {
 	data := []debugunit{
 		{Raw: "01", Want: "1\n"},
 		{Raw: "0a", Want: "10\n"},
 		{Raw: "17", Want: "23\n"},
 		{Raw: "1818", Want: "24\n"},
 		{Raw: "1819", Want: "25\n"},
+	}
+	testDebug(t, data)
+}
+
+func TestDebugSigned(t *testing.T) {
+	data := []debugunit{
+		{Raw: "20", Want: "-1\n"},
+		{Raw: "29", Want: "-10\n"},
+		{Raw: "3863", Want: "-100\n"},
+		{Raw: "3903e7", Want: "-1000\n"},
+	}
+	testDebug(t, data)
+}
+
+func TestDebugFloat(t *testing.T) {
+	data := []debugunit{
+		{Raw: "fa47c35000", Want: "100000.0\n"},
+		{Raw: "fa7f7fffff", Want: "3.4028234663852886e+38\n"},
+		{Raw: "f9c400", Want: "-4.0\n"},
+	}
+	testDebug(t, data)
+}
+
+func TestDebugMisc(t *testing.T) {
+	data := []debugunit{
+		{Raw: "f4", Want: "false\n"},
+		{Raw: "f5", Want: "true\n"},
+		{Raw: "f6", Want: "null\n"},
+		{Raw: "f7", Want: "undefined\n"},
 	}
 	testDebug(t, data)
 }
@@ -53,7 +82,6 @@ func testDebug(t *testing.T, data []debugunit) {
 			continue
 		}
 		if got := w.String(); got != d.Want {
-			t.Logf("%x - %x", got, d.Want)
 			t.Errorf("%d: want %s, got %s", i+1, strings.TrimSpace(d.Want), got)
 		}
 	}

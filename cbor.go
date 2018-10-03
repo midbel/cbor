@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 )
 
 var (
@@ -144,6 +145,26 @@ func debugMap(w io.Writer, r io.Reader, a byte) error {
 }
 
 func debugOther(w io.Writer, r io.Reader, a byte) error {
+	switch a {
+	case False:
+		fmt.Fprint(w, "false")
+	case True:
+		fmt.Fprint(w, "true")
+	case Nil:
+		fmt.Fprint(w, "null")
+	case Undefined:
+		fmt.Fprint(w, "undefined")
+	case Float16:
+		// var v uint16
+	case Float32:
+		var v uint32
+		binary.Read(r, binary.BigEndian, &v)
+		fmt.Fprintf(w, "%f", math.Float32frombits(v))
+	case Float64:
+		var v uint64
+		binary.Read(r, binary.BigEndian, &v)
+		fmt.Fprintf(w, "%f", math.Float64frombits(v))
+	}
 	return nil
 }
 
@@ -193,7 +214,34 @@ func debugUint(w io.Writer, r io.Reader, a byte) error {
 }
 
 func debugInt(w io.Writer, r io.Reader, a byte) error {
-	fmt.Fprintf(w, "%d", 0)
+	var (
+		err  error
+		item int
+	)
+	switch a {
+	case Len1:
+		var v int8
+		err = binary.Read(r, binary.BigEndian, &v)
+		item = int(v)
+	case Len2:
+		var v int16
+		err = binary.Read(r, binary.BigEndian, &v)
+		item = int(v)
+	case Len4:
+		var v int32
+		err = binary.Read(r, binary.BigEndian, &v)
+		item = int(v)
+	case Len8:
+		var v int64
+		err = binary.Read(r, binary.BigEndian, &v)
+		item = int(v)
+	default:
+		item = int(a)
+	}
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(w, "%d", -1-item)
 	return nil
 }
 
