@@ -145,6 +145,10 @@ func debugMap(w io.Writer, r io.Reader, a byte) error {
 }
 
 func debugOther(w io.Writer, r io.Reader, a byte) error {
+	if a < False {
+		fmt.Fprintf(w, fmt.Sprintf("simple(%d)", a))
+		return nil
+	}
 	switch a {
 	case False:
 		fmt.Fprint(w, "false")
@@ -155,15 +159,14 @@ func debugOther(w io.Writer, r io.Reader, a byte) error {
 	case Undefined:
 		fmt.Fprint(w, "undefined")
 	case Float16:
-		// var v uint16
 	case Float32:
 		var v uint32
 		binary.Read(r, binary.BigEndian, &v)
-		fmt.Fprintf(w, "%f", math.Float32frombits(v))
+		fmt.Fprintf(w, "%g", math.Float32frombits(v))
 	case Float64:
 		var v uint64
 		binary.Read(r, binary.BigEndian, &v)
-		fmt.Fprintf(w, "%f", math.Float64frombits(v))
+		fmt.Fprintf(w, "%g", math.Float64frombits(v))
 	}
 	return nil
 }

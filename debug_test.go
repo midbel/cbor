@@ -65,6 +65,22 @@ func TestDebugMisc(t *testing.T) {
 		{Raw: "f5", Want: "true\n"},
 		{Raw: "f6", Want: "null\n"},
 		{Raw: "f7", Want: "undefined\n"},
+		{Raw: "f0", Want: "simple(16)\n"},
+		{Raw: "f818", Want: "simple(24)\n"},
+		{Raw: "f8ff", Want: "simple(255)\n"},
+	}
+	testDebug(t, data)
+}
+
+func TestDebugString(t *testing.T) {
+	data := []debugunit{
+		{Raw: "60", Want: "\"\"\n"},
+		{Raw: "6161", Want: "\"a\"\n"},
+		{Raw: "6449455446", Want: "\"IETF\"\n"},
+		{Raw: "62225c", Want: "\"\\\"\\\\\"\n"},
+		{Raw: "62c3bc", Want: "\"\u00fc\"\n"},
+		{Raw: "63e6b0b4", Want: "\"\u6c34\"\n"},
+		// {Raw: "64f0908591", Want: "\"\ud800\udd51\"\n"},
 	}
 	testDebug(t, data)
 }
