@@ -37,6 +37,7 @@ const (
 	True
 	Nil
 	Undefined
+	Simple
 )
 
 const (
@@ -145,11 +146,15 @@ func debugMap(w io.Writer, r io.Reader, a byte) error {
 }
 
 func debugOther(w io.Writer, r io.Reader, a byte) error {
-	if a < False {
+	if a < Simple {
 		fmt.Fprintf(w, fmt.Sprintf("simple(%d)", a))
 		return nil
 	}
 	switch a {
+	case Simple:
+		var v uint8
+		binary.Read(r, binary.BigEndian, &v)
+		fmt.Fprintf(w, fmt.Sprintf("simple(%d)", v))
 	case False:
 		fmt.Fprint(w, "false")
 	case True:
