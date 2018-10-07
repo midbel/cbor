@@ -146,7 +146,7 @@ func debugMap(w io.Writer, r io.Reader, a byte) error {
 }
 
 func debugOther(w io.Writer, r io.Reader, a byte) error {
-	if a < Simple {
+	if a < False {
 		fmt.Fprintf(w, fmt.Sprintf("simple(%d)", a))
 		return nil
 	}
