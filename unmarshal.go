@@ -95,6 +95,8 @@ func unmarshalInt(r io.Reader, a byte, v reflect.Value) error {
 		err error
 	)
 	switch a {
+	default:
+		i = int64(a)
 	case Len1:
 		var v int8
 		err = binary.Read(r, binary.BigEndian, &v)
