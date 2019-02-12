@@ -26,23 +26,51 @@ func unmarshal(r *bufio.Reader, v reflect.Value) error {
 		err = unmarshalInt(r, a, v)
 	case Bin:
 	case String:
+		err = unmarshalString(r, a, v)
 	case Array:
-		if k == reflect.Slice || k == reflect.Array {
-			return nil
-		}
-		return expectedType("array/slice", k)
+		err = unmarshalArray(r, a, v)
 	case Map:
 		if k == reflect.Map {
 			return nil
 		}
-		if k == reflect.Struct {
-			return nil
+		if k == reflect.Struct || k == reflect.Ptr {
+			return unmarshalStruct(r, a, v)
 		}
 		return expectedType("map/struct", k)
 	case Tag:
 	case Other:
 	}
 	return err
+}
+
+// var (
+// 	timeType = nil
+// 	urlType = nil
+// )
+
+func unmarshalStruct(r io.Reader, a byte, v reflect.Value) error {
+	size, err := sizeof(r, a)
+	if err != nil {
+		return err
+	}
+	for i := 0; i < size; i++ {
+
+	}
+	return nil
+}
+
+func unmarshalArray(r io.Reader, a byte, v reflect.Value) error {
+	if k := v.Kind(); !(k == reflect.Array || k == reflect.Slice) {
+		return expectedType("array/slice", k)
+	}
+	size, err := sizeof(r, a)
+	if err != nil {
+		return err
+	}
+	for i := 0; i < size; i++ {
+
+	}
+	return nil
 }
 
 func unmarshalString(r io.Reader, a byte, v reflect.Value) error {
@@ -100,6 +128,8 @@ func unmarshalUint(r io.Reader, a byte, v reflect.Value) error {
 		err error
 	)
 	switch a {
+	default:
+		i = uint64(a)
 	case Len1:
 		var v uint8
 		err = binary.Read(r, binary.BigEndian, &v)
