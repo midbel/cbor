@@ -2,6 +2,7 @@ package cbor
 
 import (
 	"encoding/hex"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -92,9 +93,9 @@ func TestUnmarshalStrings(t *testing.T) {
 
 func TestUnmarshalArrayStrings(t *testing.T) {
 	data := []struct {
-		Raw string
+		Raw  string
 		Want []string
-	} {
+	}{
 		{Raw: "826568656C6C6F65776F726C64", Want: []string{"hello", "world"}},
 	}
 	for i, d := range data {
@@ -103,7 +104,7 @@ func TestUnmarshalArrayStrings(t *testing.T) {
 			t.Errorf("decode raw string fail (%d): %v", i+1, err)
 			continue
 		}
-		for i := 0; i <= len(d.Want); i++ {
+		for i := -1; i <= len(d.Want); i++ {
 			testUnmarshalArrayStrings(t, bs, d.Want, i)
 		}
 	}
@@ -119,6 +120,28 @@ func testUnmarshalArrayStrings(t *testing.T, bs []byte, values []string, n int) 
 		return
 	}
 	if strings.Join(v, ",") != strings.Join(values, ",") {
-		t.Errorf("value badly decoded: want %v, got %v" , values, v)
+		t.Errorf("value badly decoded: want %v, got %v", values, v)
+	}
+}
+
+func TestUnmarshalStruct(t *testing.T) {
+	type ab struct {
+		A int   `cbor:"a"`
+		B []int `cbor:"b"`
+	}
+	a := ab{A: 1, B: []int{2, 3}}
+
+	bs, err := hex.DecodeString("a26161016162820203")
+	if err != nil {
+		t.Errorf("fail to decode string: %v", err)
+		return
+	}
+	var b ab
+	if err := Unmarshal(bs, &b); err != nil {
+		t.Errorf("unmarshal fail: %v", err)
+		return
+	}
+	if !reflect.DeepEqual(a, b) {
+		t.Errorf("values does not match: %+v != %+v", a, b)
 	}
 }

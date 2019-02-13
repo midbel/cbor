@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"strings"
 )
 
 type reader interface {
@@ -58,8 +59,42 @@ func unmarshalStruct(r reader, a byte, v reflect.Value) error {
 	if err != nil {
 		return err
 	}
+	vs := make(map[string]reflect.Value)
+	for i, t := 0, v.Type(); i < v.NumField(); i++ {
+		f := v.Field(i)
+		if !f.CanSet() {
+			continue
+		}
+		j := t.Field(i)
+		switch n := j.Tag.Get("cbor"); strings.ToLower(n) {
+		case "-":
+			continue
+		case "":
+			vs[j.Name] = f
+		default:
+			vs[n] = f
+		}
+	}
+	seen := make(map[string]struct{})
 	for i := 0; i < size; i++ {
+		var k string
+		f := reflect.New(reflect.TypeOf(k)).Elem()
+		if err := unmarshal(r, f); err != nil {
+			return err
+		}
+		k = f.String()
+		if _, ok := seen[k]; ok {
+			return fmt.Errorf("duplicate field %s", k)
+		}
+		seen[k] = struct{}{}
 
+		f, ok := vs[k]
+		if !ok {
+			return fmt.Errorf("field not found %s", k)
+		}
+		if err := unmarshal(r, f); err != nil {
+			return err
+		}
 	}
 	return nil
 }
