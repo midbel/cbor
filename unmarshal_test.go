@@ -2,6 +2,7 @@ package cbor
 
 import (
 	"encoding/hex"
+	"strings"
 	"testing"
 )
 
@@ -66,12 +67,11 @@ func TestUnmarshalStrings(t *testing.T) {
 		Raw  string
 		Want string
 	}{
-		{Raw: "60", Want: "\"\"\n"},
-		{Raw: "6161", Want: "\"a\"\n"},
-		{Raw: "6449455446", Want: "\"IETF\"\n"},
-		{Raw: "62225c", Want: "\"\\\"\\\\\"\n"},
-		{Raw: "62c3bc", Want: "\"\u00fc\"\n"},
-		{Raw: "63e6b0b4", Want: "\"\u6c34\"\n"},
+		{Raw: "60", Want: ""},
+		{Raw: "6161", Want: "a"},
+		{Raw: "6449455446", Want: "IETF"},
+		{Raw: "62c3bc", Want: "\u00fc"},
+		{Raw: "63e6b0b4", Want: "\u6c34"},
 	}
 	for i, d := range data {
 		bs, err := hex.DecodeString(d.Raw)
@@ -87,5 +87,38 @@ func TestUnmarshalStrings(t *testing.T) {
 		if v != d.Want {
 			t.Errorf("%d value badly decoded: want %s, got %s", i+1, d.Want, v)
 		}
+	}
+}
+
+func TestUnmarshalArrayStrings(t *testing.T) {
+	data := []struct {
+		Raw string
+		Want []string
+	} {
+		{Raw: "826568656C6C6F65776F726C64", Want: []string{"hello", "world"}},
+	}
+	for i, d := range data {
+		bs, err := hex.DecodeString(d.Raw)
+		if err != nil {
+			t.Errorf("decode raw string fail (%d): %v", i+1, err)
+			continue
+		}
+		for i := 0; i <= len(d.Want); i++ {
+			testUnmarshalArrayStrings(t, bs, d.Want, i)
+		}
+	}
+}
+
+func testUnmarshalArrayStrings(t *testing.T, bs []byte, values []string, n int) {
+	var v []string
+	if n >= 0 {
+		v = make([]string, n)
+	}
+	if err := Unmarshal(bs, &v); err != nil {
+		t.Errorf("unmarshal fail: %v", err)
+		return
+	}
+	if strings.Join(v, ",") != strings.Join(values, ",") {
+		t.Errorf("value badly decoded: want %v, got %v" , values, v)
 	}
 }
