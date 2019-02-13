@@ -1,7 +1,7 @@
 package cbor
 
 import (
-	"bufio"
+	// "bufio"
 	"bytes"
 	"encoding/binary"
 	"fmt"
@@ -9,12 +9,17 @@ import (
 	"reflect"
 )
 
-func Unmarshal(bs []byte, v interface{}) error {
-	r := bytes.NewReader(bs)
-	return unmarshal(bufio.NewReader(r), reflect.ValueOf(v).Elem())
+type reader interface {
+	io.ByteReader
+	io.Reader
 }
 
-func unmarshal(r *bufio.Reader, v reflect.Value) error {
+func Unmarshal(bs []byte, v interface{}) error {
+	r := bytes.NewReader(bs)
+	return unmarshal(r, reflect.ValueOf(v).Elem())
+}
+
+func unmarshal(r reader, v reflect.Value) error {
 	b, err := r.ReadByte()
 	if err != nil {
 		return err
@@ -48,7 +53,7 @@ func unmarshal(r *bufio.Reader, v reflect.Value) error {
 // 	urlType = nil
 // )
 
-func unmarshalStruct(r io.Reader, a byte, v reflect.Value) error {
+func unmarshalStruct(r reader, a byte, v reflect.Value) error {
 	size, err := sizeof(r, a)
 	if err != nil {
 		return err
@@ -59,7 +64,7 @@ func unmarshalStruct(r io.Reader, a byte, v reflect.Value) error {
 	return nil
 }
 
-func unmarshalArray(r io.Reader, a byte, v reflect.Value) error {
+func unmarshalArray(r reader, a byte, v reflect.Value) error {
 	if k := v.Kind(); !(k == reflect.Array || k == reflect.Slice) {
 		return expectedType("array/slice", k)
 	}
@@ -67,13 +72,27 @@ func unmarshalArray(r io.Reader, a byte, v reflect.Value) error {
 	if err != nil {
 		return err
 	}
+	if v.IsNil() {
+		v.Set(reflect.MakeSlice(v.Type(), size, size))
+	}
 	for i := 0; i < size; i++ {
-
+		var f reflect.Value
+		if i < v.Len() {
+			f = v.Index(i)
+		} else {
+			f = reflect.New(v.Type().Elem()).Elem()
+		}
+		if err := unmarshal(r, f); err != nil {
+			return err
+		}
+		if i >= v.Len() {
+			v.Set(reflect.Append(v, f))
+		}
 	}
 	return nil
 }
 
-func unmarshalString(r io.Reader, a byte, v reflect.Value) error {
+func unmarshalString(r reader, a byte, v reflect.Value) error {
 	if k := v.Kind(); k != reflect.String {
 		return expectedType("string", k)
 	}
@@ -90,7 +109,7 @@ func unmarshalString(r io.Reader, a byte, v reflect.Value) error {
 	return nil
 }
 
-func unmarshalInt(r io.Reader, a byte, v reflect.Value) error {
+func unmarshalInt(r reader, a byte, v reflect.Value) error {
 	var (
 		i   int64
 		err error
@@ -125,7 +144,7 @@ func unmarshalInt(r io.Reader, a byte, v reflect.Value) error {
 	return nil
 }
 
-func unmarshalUint(r io.Reader, a byte, v reflect.Value) error {
+func unmarshalUint(r reader, a byte, v reflect.Value) error {
 	var (
 		i   uint64
 		err error
