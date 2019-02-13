@@ -60,3 +60,32 @@ func TestUnmarshalUint(t *testing.T) {
 		}
 	}
 }
+
+func TestUnmarshalStrings(t *testing.T) {
+	data := []struct {
+		Raw  string
+		Want string
+	}{
+		{Raw: "60", Want: "\"\"\n"},
+		{Raw: "6161", Want: "\"a\"\n"},
+		{Raw: "6449455446", Want: "\"IETF\"\n"},
+		{Raw: "62225c", Want: "\"\\\"\\\\\"\n"},
+		{Raw: "62c3bc", Want: "\"\u00fc\"\n"},
+		{Raw: "63e6b0b4", Want: "\"\u6c34\"\n"},
+	}
+	for i, d := range data {
+		bs, err := hex.DecodeString(d.Raw)
+		if err != nil {
+			t.Errorf("decode raw string fail (%d): %v", i+1, err)
+			continue
+		}
+		var v string
+		if err := Unmarshal(bs, &v); err != nil {
+			t.Errorf("unmarshal fail (%d): %v", i+1, err)
+			continue
+		}
+		if v != d.Want {
+			t.Errorf("%d value badly decoded: want %s, got %s", i+1, d.Want, v)
+		}
+	}
+}

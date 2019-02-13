@@ -85,7 +85,8 @@ func unmarshalString(r io.Reader, a byte, v reflect.Value) error {
 	if _, err := io.ReadFull(r, bs); err != nil {
 		return err
 	}
-	v.SetBytes(bs)
+	v.SetString(string(bs))
+	// v.SetBytes(bs)
 	return nil
 }
 
