@@ -37,14 +37,15 @@ func unmarshal(r reader, v reflect.Value) error {
 		err = unmarshalArray(r, a, v)
 	case Map:
 		if k == reflect.Map {
-			return nil
+			return unmarshalMap(r, a, v)
 		}
 		if k == reflect.Struct || k == reflect.Ptr {
 			return unmarshalStruct(r, a, v)
 		}
 		return expectedType("map/struct", k)
-	case Tag:
-	case Other:
+	case Tag, Other:
+		return fmt.Errorf("not yet implemented: Tag, Other")
+		// case Other:
 	}
 	return err
 }
@@ -53,6 +54,34 @@ func unmarshal(r reader, v reflect.Value) error {
 // 	timeType = nil
 // 	urlType = nil
 // )
+
+func unmarshalMap(r reader, a byte, v reflect.Value) error {
+	size, err := sizeof(r, a)
+	if err != nil {
+		return err
+	}
+	if v.IsNil() {
+		v.Set(reflect.MakeMapWithSize(v.Type(), size))
+	}
+	seen := make(map[string]struct{})
+	for i := 0; i < size; i++ {
+		k := reflect.New(v.Type().Key()).Elem()
+		if err := unmarshal(r, k); err != nil {
+			return err
+		}
+		if _, ok := seen[k.String()]; ok {
+			return fmt.Errorf("duplicate field %s", k)
+		}
+		seen[k.String()] = struct{}{}
+
+		f := reflect.New(v.Type().Elem()).Elem()
+		if err := unmarshal(r, f); err != nil {
+			return err
+		}
+		v.SetMapIndex(k, f)
+	}
+	return nil
+}
 
 func unmarshalStruct(r reader, a byte, v reflect.Value) error {
 	size, err := sizeof(r, a)

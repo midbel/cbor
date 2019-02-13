@@ -114,6 +114,28 @@ func TestUnmarshalStrings(t *testing.T) {
 	})
 }
 
+func TestUnmarshalMap(t *testing.T) {
+	bs, err := hex.DecodeString("a4616101616202616304616405")
+	if err != nil {
+		t.Errorf("fail to decode string: %v", err)
+		return
+	}
+	var m map[string]int
+	if err := Unmarshal(bs, &m); err != nil {
+		t.Errorf("unmarshal fail: %v", err)
+		return
+	}
+	v := map[string]int{
+		"a": 1,
+		"b": 2,
+		"c": 4,
+		"d": 5,
+	}
+	if !reflect.DeepEqual(m, v) {
+		t.Errorf("values does not match: %+v != %+v", m, v)
+	}
+}
+
 func TestUnmarshalStruct(t *testing.T) {
 	type ab struct {
 		A int   `cbor:"a"`
