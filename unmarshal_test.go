@@ -3,7 +3,6 @@ package cbor
 import (
 	"encoding/hex"
 	"reflect"
-	"strings"
 	"testing"
 )
 
@@ -64,64 +63,55 @@ func TestUnmarshalUint(t *testing.T) {
 }
 
 func TestUnmarshalStrings(t *testing.T) {
-	data := []struct {
-		Raw  string
-		Want string
-	}{
-		{Raw: "60", Want: ""},
-		{Raw: "6161", Want: "a"},
-		{Raw: "6449455446", Want: "IETF"},
-		{Raw: "62c3bc", Want: "\u00fc"},
-		{Raw: "63e6b0b4", Want: "\u6c34"},
-	}
-	for i, d := range data {
-		bs, err := hex.DecodeString(d.Raw)
+	t.Run("single-string", func(t *testing.T) {
+		data := []struct {
+			Raw  string
+			Want string
+		}{
+			{Raw: "60", Want: ""},
+			{Raw: "6161", Want: "a"},
+			{Raw: "6449455446", Want: "IETF"},
+			{Raw: "62c3bc", Want: "\u00fc"},
+			{Raw: "63e6b0b4", Want: "\u6c34"},
+		}
+		for i, d := range data {
+			bs, err := hex.DecodeString(d.Raw)
+			if err != nil {
+				t.Errorf("decode raw string fail (%d): %v", i+1, err)
+				continue
+			}
+			var v string
+			if err := Unmarshal(bs, &v); err != nil {
+				t.Errorf("unmarshal fail (%d): %v", i+1, err)
+				continue
+			}
+			if v != d.Want {
+				t.Errorf("%d value badly decoded: want %s, got %s", i+1, d.Want, v)
+			}
+		}
+	})
+	t.Run("array-string", func(t *testing.T) {
+		vs := []string{"hello", "world"}
+		bs, err := hex.DecodeString("826568656C6C6F65776F726C64")
 		if err != nil {
-			t.Errorf("decode raw string fail (%d): %v", i+1, err)
-			continue
+			t.Errorf("decode raw string fail: %v", err)
+			return
 		}
-		var v string
-		if err := Unmarshal(bs, &v); err != nil {
-			t.Errorf("unmarshal fail (%d): %v", i+1, err)
-			continue
+		for i := -1; i <= len(vs); i++ {
+			var v []string
+			if i >= 0 {
+				v = make([]string, i)
+			}
+			if err := Unmarshal(bs, &v); err != nil {
+				t.Errorf("unmarshal fail with length %d: %v", i, err)
+				return
+			}
+			if !reflect.DeepEqual(v, vs) {
+				t.Errorf("value badly decoded: want %v, got %v", vs, v)
+				return
+			}
 		}
-		if v != d.Want {
-			t.Errorf("%d value badly decoded: want %s, got %s", i+1, d.Want, v)
-		}
-	}
-}
-
-func TestUnmarshalArrayStrings(t *testing.T) {
-	data := []struct {
-		Raw  string
-		Want []string
-	}{
-		{Raw: "826568656C6C6F65776F726C64", Want: []string{"hello", "world"}},
-	}
-	for i, d := range data {
-		bs, err := hex.DecodeString(d.Raw)
-		if err != nil {
-			t.Errorf("decode raw string fail (%d): %v", i+1, err)
-			continue
-		}
-		for i := -1; i <= len(d.Want); i++ {
-			testUnmarshalArrayStrings(t, bs, d.Want, i)
-		}
-	}
-}
-
-func testUnmarshalArrayStrings(t *testing.T, bs []byte, values []string, n int) {
-	var v []string
-	if n >= 0 {
-		v = make([]string, n)
-	}
-	if err := Unmarshal(bs, &v); err != nil {
-		t.Errorf("unmarshal fail: %v", err)
-		return
-	}
-	if strings.Join(v, ",") != strings.Join(values, ",") {
-		t.Errorf("value badly decoded: want %v, got %v", values, v)
-	}
+	})
 }
 
 func TestUnmarshalStruct(t *testing.T) {
@@ -130,18 +120,37 @@ func TestUnmarshalStruct(t *testing.T) {
 		B []int `cbor:"b"`
 	}
 	a := ab{A: 1, B: []int{2, 3}}
+	b := ab{A: 4, B: []int{5, 6}}
+	t.Run("single-struct", func(t *testing.T) {
 
-	bs, err := hex.DecodeString("a26161016162820203")
-	if err != nil {
-		t.Errorf("fail to decode string: %v", err)
-		return
-	}
-	var b ab
-	if err := Unmarshal(bs, &b); err != nil {
-		t.Errorf("unmarshal fail: %v", err)
-		return
-	}
-	if !reflect.DeepEqual(a, b) {
-		t.Errorf("values does not match: %+v != %+v", a, b)
-	}
+		bs, err := hex.DecodeString("a26161016162820203")
+		if err != nil {
+			t.Errorf("fail to decode string: %v", err)
+			return
+		}
+		var c ab
+		if err := Unmarshal(bs, &c); err != nil {
+			t.Errorf("unmarshal fail: %v", err)
+			return
+		}
+		if !reflect.DeepEqual(a, c) {
+			t.Errorf("values does not match: %+v != %+v", a, c)
+		}
+	})
+	t.Run("array-struct", func(t *testing.T) {
+		bs, err := hex.DecodeString("82a26161016162820203a26161046162820506")
+		if err != nil {
+			t.Errorf("fail to decode string: %v", err)
+			return
+		}
+		var cs []ab
+		if err := Unmarshal(bs, &cs); err != nil {
+			t.Errorf("unmarshal fail: %v", err)
+			return
+		}
+		vs := []ab{a, b}
+		if !reflect.DeepEqual(cs, vs) {
+			t.Errorf("values does not match: %+v != %+v", vs, cs)
+		}
+	})
 }
