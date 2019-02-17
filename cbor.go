@@ -47,11 +47,11 @@ const (
 )
 
 const (
-	IsoTime  byte = 0x00
-	UnixTime byte = 0x01
-	Item     byte = 0x18
-	URI      byte = 0x20
-	Regex    byte = 0x23
+	TagRFC3339 = 0x00
+	TagUnix    = 0x01
+	TagItem    = 0x18
+	TagURI     = 0x20
+	TagRegex   = 0x23
 )
 
 const (

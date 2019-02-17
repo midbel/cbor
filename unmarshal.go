@@ -43,9 +43,10 @@ func unmarshal(r reader, v reflect.Value) error {
 			return unmarshalStruct(r, a, v)
 		}
 		return expectedType("map/struct", k)
-	case Tag, Other:
-		return fmt.Errorf("not yet implemented: Tag, Other")
-		// case Other:
+	case Other:
+		return unmarshalSimple(r, a, v)
+	case Tag:
+		return unmarshalTagged(r, a, v)
 	}
 	return err
 }
@@ -54,6 +55,69 @@ func unmarshal(r reader, v reflect.Value) error {
 // 	timeType = nil
 // 	urlType = nil
 // )
+
+func unmarshalTagged(r reader, a byte, v reflect.Value) error {
+	return fmt.Errorf("not yet implemented: Tag")
+}
+
+func unmarshalSimple(r reader, a byte, v reflect.Value) error {
+	switch k := v.Kind(); a {
+	default:
+		if isInt(k) {
+			v.SetInt(int64(a))
+		} else if isUint(k) {
+			v.SetUint(uint64(a))
+		} else {
+			return expectedType("int/uint", k)
+		}
+	case Simple:
+		b, err := r.ReadByte()
+		if err != nil {
+			return err
+		}
+		if isInt(k) {
+			v.SetInt(int64(b))
+		} else if isUint(k) {
+			v.SetUint(uint64(b))
+		} else {
+			return expectedType("int/uint", k)
+		}
+	case False:
+		if k != reflect.Bool {
+			return expectedType("bool", k)
+		}
+		v.SetBool(false)
+	case True:
+		if k != reflect.Bool {
+			return expectedType("bool", k)
+		}
+		v.SetBool(true)
+	case Nil, Undefined:
+	case Float16:
+		return fmt.Errorf("float16 not yet supported")
+	case Float32:
+		if k == reflect.Float32 || k == reflect.Float64 {
+			var f float32
+			if err := binary.Read(r, binary.BigEndian, &f); err != nil {
+				return err
+			}
+			v.SetFloat(float64(f))
+		} else {
+			return expectedType("float32", k)
+		}
+	case Float64:
+		if k == reflect.Float64 {
+			var f float64
+			if err := binary.Read(r, binary.BigEndian, &f); err != nil {
+				return err
+			}
+			v.SetFloat(f)
+		} else {
+			return expectedType("float64", k)
+		}
+	}
+	return nil
+}
 
 func unmarshalMap(r reader, a byte, v reflect.Value) error {
 	size, err := sizeof(r, a)
@@ -135,6 +199,9 @@ func unmarshalArray(r reader, a byte, v reflect.Value) error {
 	size, err := sizeof(r, a)
 	if err != nil {
 		return err
+	}
+	if k := v.Kind(); v == reflect.Array && size >= v.Len() {
+		return fmt.Errorf("array length too short (got: %d, want: %d)", v.Len(), size)
 	}
 	if v.IsNil() {
 		v.Set(reflect.MakeSlice(v.Type(), size, size))

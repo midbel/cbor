@@ -15,6 +15,9 @@ func TestUnmarshalInt(t *testing.T) {
 		{Raw: "29", Want: -10},
 		{Raw: "3863", Want: -100},
 		{Raw: "3903e7", Want: -1000},
+		{Raw: "f0", Want: 16},
+		{Raw: "f818", Want: 24},
+		{Raw: "f8ff", Want: 255},
 	}
 	for i, d := range data {
 		bs, err := hex.DecodeString(d.Raw)
@@ -44,6 +47,9 @@ func TestUnmarshalUint(t *testing.T) {
 		{Raw: "17", Want: 23},
 		{Raw: "1818", Want: 24},
 		{Raw: "1819", Want: 25},
+		{Raw: "f0", Want: 16},
+		{Raw: "f818", Want: 24},
+		{Raw: "f8ff", Want: 255},
 	}
 	for i, d := range data {
 		bs, err := hex.DecodeString(d.Raw)
@@ -175,4 +181,55 @@ func TestUnmarshalStruct(t *testing.T) {
 			t.Errorf("values does not match: %+v != %+v", vs, cs)
 		}
 	})
+}
+
+func TestUnmarshalFloat(t *testing.T) {
+	data := []struct {
+		Raw  string
+		Want float64
+	}{
+		{Raw: "fa47c35000", Want: 100000.0},
+		{Raw: "fa7f7fffff", Want: 3.4028234663852886e+38},
+		{Raw: "f9c400", Want: -4.0},
+	}
+	for i, d := range data {
+		bs, err := hex.DecodeString(d.Raw)
+		if err != nil {
+			t.Errorf("decode raw string fail (%d): %v", i+1, err)
+			continue
+		}
+		var v float64
+		if err := Unmarshal(bs, &v); err != nil {
+			t.Errorf("unmarshal fail (%d): %v", i+1, err)
+			continue
+		}
+		if v != d.Want {
+			t.Errorf("%d value badly decoded: want %f, got %f", i+1, d.Want, v)
+		}
+	}
+}
+
+func TestUnmarshalBool(t *testing.T) {
+	data := []struct {
+		Raw  string
+		Want bool
+	}{
+		{Raw: "f5", Want: true},
+		{Raw: "f4", Want: false},
+	}
+	for i, d := range data {
+		bs, err := hex.DecodeString(d.Raw)
+		if err != nil {
+			t.Errorf("decode raw string fail (%d): %v", i+1, err)
+			continue
+		}
+		var v bool
+		if err := Unmarshal(bs, &v); err != nil {
+			t.Errorf("unmarshal fail (%d): %v", i+1, err)
+			continue
+		}
+		if v != d.Want {
+			t.Errorf("%d value badly decoded: want %t, got %t", i+1, d.Want, v)
+		}
+	}
 }
