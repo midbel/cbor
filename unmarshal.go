@@ -57,7 +57,25 @@ func unmarshal(r reader, v reflect.Value) error {
 // )
 
 func unmarshalTagged(r reader, a byte, v reflect.Value) error {
-	return fmt.Errorf("not yet implemented: Tag")
+	switch a {
+	default:
+	case Len1:
+		b, err := r.ReadByte()
+		if err != nil {
+			return err
+		}
+		a = b
+	case Len2:
+	case Len4:
+	case Len8:
+	}
+	switch a {
+	default:
+		return fmt.Errorf("unsupported tagged item %02x", a)
+	case TagURI, TagRFC3339, TagUnix:
+		return unmarshal(r, v)
+	}
+	return nil
 }
 
 func unmarshalSimple(r reader, a byte, v reflect.Value) error {
@@ -200,7 +218,7 @@ func unmarshalArray(r reader, a byte, v reflect.Value) error {
 	if err != nil {
 		return err
 	}
-	if k := v.Kind(); v == reflect.Array && size >= v.Len() {
+	if k := v.Kind(); k == reflect.Array && size >= v.Len() {
 		return fmt.Errorf("array length too short (got: %d, want: %d)", v.Len(), size)
 	}
 	if v.IsNil() {

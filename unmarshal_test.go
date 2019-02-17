@@ -6,6 +6,65 @@ import (
 	"testing"
 )
 
+func TestUnmarshalTagged(t *testing.T) {
+	t.Run("url", testUnmarshalTagURI)
+	t.Run("rfc3339", testUnmarshalTagRFC3339)
+	t.Run("unix-int", testUnmarshalTagUnixInt)
+	t.Run("unix-float", testUnmarshalTagUnixFloat)
+}
+
+func testUnmarshalTagUnixFloat(t *testing.T) {
+	s := "c1fb41d452d9ec200000"
+	var got float64
+	if err := decodeAndUnmarshal(s, &got); err != nil {
+		t.Errorf("fail to decode: %v", err)
+		return
+	}
+	want := 1363896240.5
+	if got != want {
+		t.Errorf("want: %f, got: %f", want, got)
+	}
+}
+
+func testUnmarshalTagUnixInt(t *testing.T) {
+	s := "c11a514b67b0"
+	var got int
+	if err := decodeAndUnmarshal(s, &got); err != nil {
+		t.Errorf("fail to decode: %v", err)
+		return
+	}
+	want := 1363896240
+	if got != want {
+		t.Errorf("want: %d, got: %d", want, got)
+	}
+}
+
+func testUnmarshalTagRFC3339(t *testing.T) {
+	s := "c074323031332d30332d32315432303a30343a30305a"
+	var got string
+	if err := decodeAndUnmarshal(s, &got); err != nil {
+		t.Errorf("fail to decode: %v", err)
+		return
+	}
+	want := "2013-03-21T20:04:00Z"
+	if got != want {
+		t.Errorf("want: %s, got: %s", want, got)
+	}
+}
+
+func testUnmarshalTagURI(t *testing.T) {
+	s := "d82076687474703a2f2f7777772e6578616d706c652e636f6d"
+	var got string
+	if err := decodeAndUnmarshal(s, &got); err != nil {
+		t.Errorf("fail to decode: %v", err)
+		return
+	}
+	want := "http://www.example.com"
+	if got != want {
+		t.Errorf("want: %s, got: %s", want, got)
+	}
+}
+
 func TestUnmarshalInt(t *testing.T) {
 	data := []struct {
 		Raw  string
@@ -20,18 +79,13 @@ func TestUnmarshalInt(t *testing.T) {
 		{Raw: "f8ff", Want: 255},
 	}
 	for i, d := range data {
-		bs, err := hex.DecodeString(d.Raw)
-		if err != nil {
-			t.Errorf("decode raw string fail (%d): %v", i+1, err)
-			continue
-		}
-		var v int
-		if err := Unmarshal(bs, &v); err != nil {
+		var got int
+		if err := decodeAndUnmarshal(d.Raw, &got); err != nil {
 			t.Errorf("unmarshal fail (%d): %v", i+1, err)
 			continue
 		}
-		if v != d.Want {
-			t.Errorf("%d value badly decoded: want %d, got %d", i+1, d.Want, v)
+		if got != d.Want {
+			t.Errorf("%d value badly decoded: want %d, got %d", i+1, d.Want, got)
 		}
 	}
 }
@@ -52,18 +106,13 @@ func TestUnmarshalUint(t *testing.T) {
 		{Raw: "f8ff", Want: 255},
 	}
 	for i, d := range data {
-		bs, err := hex.DecodeString(d.Raw)
-		if err != nil {
-			t.Errorf("decode raw string fail (%d): %v", i+1, err)
-			continue
-		}
-		var v uint
-		if err := Unmarshal(bs, &v); err != nil {
+		var got uint
+		if err := decodeAndUnmarshal(d.Raw, &got); err != nil {
 			t.Errorf("unmarshal fail (%d): %v", i+1, err)
 			continue
 		}
-		if v != d.Want {
-			t.Errorf("%d value badly decoded: want %d, got %d", i+1, d.Want, v)
+		if got != d.Want {
+			t.Errorf("%d value badly decoded: want %d, got %d", i+1, d.Want, got)
 		}
 	}
 }
@@ -81,18 +130,13 @@ func TestUnmarshalStrings(t *testing.T) {
 			{Raw: "63e6b0b4", Want: "\u6c34"},
 		}
 		for i, d := range data {
-			bs, err := hex.DecodeString(d.Raw)
-			if err != nil {
-				t.Errorf("decode raw string fail (%d): %v", i+1, err)
-				continue
-			}
-			var v string
-			if err := Unmarshal(bs, &v); err != nil {
+			var got string
+			if err := decodeAndUnmarshal(d.Raw, &got); err != nil {
 				t.Errorf("unmarshal fail (%d): %v", i+1, err)
 				continue
 			}
-			if v != d.Want {
-				t.Errorf("%d value badly decoded: want %s, got %s", i+1, d.Want, v)
+			if got != d.Want {
+				t.Errorf("%d value badly decoded: want %s, got %s", i+1, d.Want, got)
 			}
 		}
 	})
@@ -193,18 +237,13 @@ func TestUnmarshalFloat(t *testing.T) {
 		{Raw: "f9c400", Want: -4.0},
 	}
 	for i, d := range data {
-		bs, err := hex.DecodeString(d.Raw)
-		if err != nil {
-			t.Errorf("decode raw string fail (%d): %v", i+1, err)
-			continue
-		}
-		var v float64
-		if err := Unmarshal(bs, &v); err != nil {
+		var got float64
+		if err := decodeAndUnmarshal(d.Raw, &got); err != nil {
 			t.Errorf("unmarshal fail (%d): %v", i+1, err)
 			continue
 		}
-		if v != d.Want {
-			t.Errorf("%d value badly decoded: want %f, got %f", i+1, d.Want, v)
+		if got != d.Want {
+			t.Errorf("%d value badly decoded: want %f, got %f", i+1, d.Want, got)
 		}
 	}
 }
@@ -218,18 +257,21 @@ func TestUnmarshalBool(t *testing.T) {
 		{Raw: "f4", Want: false},
 	}
 	for i, d := range data {
-		bs, err := hex.DecodeString(d.Raw)
-		if err != nil {
-			t.Errorf("decode raw string fail (%d): %v", i+1, err)
-			continue
-		}
-		var v bool
-		if err := Unmarshal(bs, &v); err != nil {
+		var got bool
+		if err := decodeAndUnmarshal(d.Raw, &got); err != nil {
 			t.Errorf("unmarshal fail (%d): %v", i+1, err)
 			continue
 		}
-		if v != d.Want {
-			t.Errorf("%d value badly decoded: want %t, got %t", i+1, d.Want, v)
+		if got != d.Want {
+			t.Errorf("%d value badly decoded: want %t, got %t", i+1, d.Want, got)
 		}
 	}
+}
+
+func decodeAndUnmarshal(s string, v interface{}) error {
+	bs, err := hex.DecodeString(s)
+	if err != nil {
+		return err
+	}
+	return Unmarshal(bs, v)
 }
