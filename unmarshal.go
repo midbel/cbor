@@ -51,11 +51,6 @@ func unmarshal(r reader, v reflect.Value) error {
 	return err
 }
 
-// var (
-// 	timeType = nil
-// 	urlType = nil
-// )
-
 func unmarshalTagged(r reader, a byte, v reflect.Value) error {
 	switch a {
 	default:

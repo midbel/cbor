@@ -10,8 +10,8 @@ import (
 )
 
 func Marshal(v interface{}) ([]byte, error) {
-	b := new(bytes.Buffer)
-	if err := marshal(b, reflect.ValueOf(v)); err != nil {
+	var b bytes.Buffer
+	if err := marshal(&b, reflect.ValueOf(v)); err != nil {
 		return nil, err
 	}
 	return b.Bytes(), nil
